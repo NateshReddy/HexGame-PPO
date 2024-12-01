@@ -22,6 +22,8 @@ class Agent:
         self.actor = self.actor_critic.actor
         self.critic = self.actor_critic.critic
         self.memory = PPOBufferMemory(batch_size)  # Initialisierung des Speichers
+        self.device = T.device('cpu')
+        self.actor_critic.to(self.device)
 
     def remember(self, state, action, probs, vals, reward, done):
         self.memory.store_memory(state, action, probs, vals, reward, done)
@@ -37,33 +39,30 @@ class Agent:
         self.critic.load_checkpoint()
 
     def choose_action(self, observation, info):
-        state = T.tensor(np.array([observation]), dtype=T.float).to(self.actor_critic.device)
+        state = T.tensor(np.array([observation]), dtype=T.float).to(self.device)
         return self.actor_critic.act(state, info["action_mask"])
        
     def learn(self):
         for _ in range(self.n_epochs):
             state_arr, action_arr, old_prob_arr, vals_arr, reward_arr, dones_arr, batches = self.memory.generate_batches()
 
-            values = T.tensor(vals_arr).to(self.actor_critic.device)
+            values = T.tensor(vals_arr).to(self.device)
             advantage = np.zeros(len(reward_arr), dtype=np.float32)
 
             for t in range(len(reward_arr)):
                 advantage[t] = reward_arr[t] - values[t]
-            advantage = T.tensor(advantage).to(self.actor_critic.device)
+            advantage = T.tensor(advantage).to(self.device)
 
             for batch in batches:
-                states = T.tensor(state_arr[batch], dtype=T.float).to(self.actor_critic.device)
-                old_probs = T.tensor(old_prob_arr[batch]).to(self.actor_critic.device)
-                actions = T.tensor(action_arr[batch], dtype=T.long).to(self.actor_critic.device)
+                states = T.tensor(state_arr[batch], dtype=T.float).to(self.device)
+                old_probs = T.tensor(old_prob_arr[batch]).to(self.device)
+                actions = T.tensor(action_arr[batch], dtype=T.long).to(self.device)
 
-        
-                dist = self.actor(states)
-                dist = Categorical(dist)
-                critic_value = self.critic(states)
+                critic_value, new_probs, entropy = self.actor_critic.evaluate(states, actions)
 
                 critic_value = T.squeeze(critic_value)
 
-                new_probs = dist.log_prob(actions)
+                # new_probs = dist.log_prob(actions)
                 prob_ratio = new_probs.exp() / old_probs.exp()
                 weighted_probs = advantage[batch] * prob_ratio
                 weighted_clipped_probs = T.clamp(prob_ratio, 1 - self.policy_clip, 1 + self.policy_clip) * advantage[
@@ -71,8 +70,7 @@ class Agent:
                 actor_loss = -T.min(weighted_probs, weighted_clipped_probs).mean()
 
                 # # Entropy regularization term to encourage exploration, comment in for experiment 5
-                # entropy_bonus = dist.entropy().mean()
-                # actor_loss -= self.entropy_coef * entropy_bonus
+                # actor_loss -= self.entropy_coef * entropy
 
                 returns = advantage[batch] + values[batch]
                 critic_loss = (returns - critic_value) ** 2
@@ -82,7 +80,8 @@ class Agent:
                 self.actor_critic.actor_optimizer.zero_grad()
                 self.actor_critic.critic_optimizer.zero_grad()
 
-                total_loss.backward()
+                actor_loss.backward()
+                critic_loss.backward()
                 
                 self.actor_critic.actor_optimizer.step()
                 self.actor_critic.critic_optimizer.step()

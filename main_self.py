@@ -16,8 +16,8 @@ def save_ppo_checkpoint(agent, filename='ppo_checkpoint.pth', iteration=0):
     """
     checkpoint = {
         'model_state_dict': agent.actor_critic.state_dict(),  # Save actor model state
-        'actor_optimizer_state_dict': agent.actor.optimizer.state_dict(),  # Save actor optimizer state
-        'critic_optimizer_state_dict': agent.critic.optimizer.state_dict(),  # Save critic optimizer state
+        'actor_optimizer_state_dict': agent.actor_critic.actor_optimizer.state_dict(),  # Save actor optimizer state
+        'critic_optimizer_state_dict': agent.actor_critic.critic_optimizer.state_dict(),  # Save critic optimizer state
         'iteration': iteration  # Store current iteration or epoch
     }
     torch.save(checkpoint, filename)
@@ -34,9 +34,9 @@ def load_ppo_checkpoint(agent, filename='ppo_checkpoint.pth'):
     """
     try:
         checkpoint = torch.load(filename)
-        agent.actor.load_state_dict(checkpoint['model_state_dict'])
-        agent.actor.optimizer.load_state_dict(checkpoint['actor_optimizer_state_dict'])
-        agent.critic.optimizer.load_state_dict(checkpoint['critic_optimizer_state_dict'])
+        agent.actor_critic.load_state_dict(checkpoint['model_state_dict'])
+        agent.actor_critic.actor_optimizer.load_state_dict(checkpoint['actor_optimizer_state_dict'])
+        agent.actor_critic.critic_optimizer.load_state_dict(checkpoint['critic_optimizer_state_dict'])
         print(f"Checkpoint loaded from {filename}")
     except FileNotFoundError:
         print(f"Checkpoint file not found at {filename}. Proceeding without loading.")
@@ -48,7 +48,7 @@ def main():
 
     # PPO Agent 1: Load from a checkpoint
     agent1 = Agent(
-        n_actions=env.action_spaces[env.possible_agents[0]].n - 1,
+        n_actions=env.action_spaces[env.possible_agents[0]].n,
         input_dims=[env.board_size * env.board_size],
         gamma=0.99,
         alpha=0.0003,
@@ -61,7 +61,7 @@ def main():
 
     # PPO Agent 2: Train from scratch
     agent2 = Agent(
-        n_actions=env.action_spaces[env.possible_agents[0]].n - 1,
+        n_actions=env.action_spaces[env.possible_agents[0]].n,
         input_dims=[env.board_size * env.board_size],
         gamma=0.99,
         alpha=0.0003,
@@ -71,7 +71,7 @@ def main():
         n_epochs=10
     )
 
-    n_games = 50  # Total games to play
+    n_games = 5  # Total games to play
 
     for game in tqdm(range(n_games)):
         env.reset()
@@ -94,10 +94,10 @@ def main():
                 if agent_id == "player_1":
                     # Agent 1 chooses an action
                     obs_flat = observation["observation"].flatten()
-                    action, probs, value = agent1.choose_action(obs_flat), info
+                    action, probs, value = agent1.choose_action(obs_flat, info)
 
                     # Step the environment with the chosen action
-                    env.step(action)
+                    env.step(action.item())
 
                     # Get the updated reward after the step
                     updated_reward = env.rewards[agent_id]
@@ -112,7 +112,7 @@ def main():
                     action, probs, value = agent2.choose_action(obs_flat, info)
 
                     # Step the environment with the chosen action
-                    env.step(action)
+                    env.step(action.item())
 
                     # Get the updated reward after the step
                     updated_reward = env.rewards[agent_id]

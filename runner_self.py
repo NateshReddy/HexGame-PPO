@@ -15,7 +15,7 @@ env = OurHexGame(board_size=11, render_mode=None, sparse_flag=False)  # No rende
 
 # Initialize Old PPO Agent
 ppo_agent_old = Agent(
-    n_actions=env.action_spaces[env.possible_agents[0]].n - 1,
+    n_actions=env.action_spaces[env.possible_agents[0]].n,
     input_dims=[env.board_size * env.board_size],
     gamma=0.99,
     alpha=0.0003,
@@ -36,7 +36,7 @@ ppo_agent_old.actor_critic.eval()
 
 # Initialize New PPO Agent
 ppo_agent_new = Agent(
-    n_actions=env.action_spaces[env.possible_agents[0]].n - 1,
+    n_actions=env.action_spaces[env.possible_agents[0]].n,
     input_dims=[env.board_size * env.board_size],
     gamma=0.99,
     alpha=0.0003,
@@ -49,11 +49,11 @@ ppo_agent_new = Agent(
 # Load trained New PPO model
 try:
     checkpoint = torch.load(MODEL_PATH_NEW)
-    ppo_agent_new.actor.load_state_dict(checkpoint['model_state_dict'])  # Load the actor model
+    ppo_agent_new.actor_critic.load_state_dict(checkpoint['model_state_dict'])  # Load the actor model
     print(f"New model loaded successfully from {MODEL_PATH_NEW}.")
 except FileNotFoundError:
     print(f"New model file not found at {MODEL_PATH_NEW}. Proceeding with untrained PPO agent.")
-ppo_agent_new.actor.eval()
+ppo_agent_new.actor_critic.eval()
 
 
 # Define the run_game function
@@ -85,12 +85,12 @@ def run_game(agent_1, agent_2, env, agent_1_player=1):
         # Select action based on the player
         if current_player == agent_1_player:
             obs_flat = observation["observation"].flatten()
-            action, _, _ = agent_1.choose_action(obs_flat)  # Agent 1 chooses an action
+            action, _, _ = agent_1.choose_action(obs_flat, info)  # Agent 1 chooses an action
         else:
             obs_flat = observation["observation"].flatten()
-            action, _, _ = agent_2.choose_action(obs_flat)  # Agent 2 chooses an action
+            action, _, _ = agent_2.choose_action(obs_flat, info)  # Agent 2 chooses an action
 
-        env.step(action)
+        env.step(action.item())
 
     # Determine winner
     return 1 if rewards[1] > rewards[2] else 2

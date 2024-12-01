@@ -32,8 +32,7 @@ class ActorCriticNetwork(nn.Module):
 
         self.actor_optimizer = optim.Adam(self.parameters(), lr=alpha)
         self.critic_optimizer = optim.Adam(self.parameters(), lr=alpha)
-        self.device = T.device('cpu')
-        self.to(self.device)
+        self.device =  T.device('cpu')
 
     def forward(self, state):
         dist = self.actor(state)
@@ -68,7 +67,6 @@ class ActorCriticNetwork(nn.Module):
 
     def act(self, state: np.ndarray, mask: np.ndarray):
         """Compute action and log probabilities."""
-        state = T.tensor(np.array([state]), dtype=T.float).to(self.device)
         probs = self.actor(state)
         # Convert probs to numpy array
         probs_np = probs.detach().cpu().numpy().flatten()
@@ -94,3 +92,12 @@ class ActorCriticNetwork(nn.Module):
         action_log_prob = T.log(probs_tensor)
         state_val = self.critic(state)
         return action_tensor.detach(), action_log_prob.detach(), state_val.detach()
+    
+    def evaluate(self, state: np.ndarray, action: T.Tensor):
+        """Evaluate state for critic value."""
+        probs = self.actor(state)
+        distribution = T.distributions.Categorical(probs)
+        action_log_prob = distribution.log_prob(action)
+        entropy = distribution.entropy()
+        state_val = self.critic(state)
+        return state_val, action_log_prob, entropy
