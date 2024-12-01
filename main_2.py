@@ -75,6 +75,10 @@ def main():
 
                     # Get the updated reward after the step
                     updated_reward = env.rewards[agent_id]
+                    # if env.terminations[agent_id]:
+                    #     player_2_rewards.append(-61)
+                    #     scores["player_2"] += -61
+
 
                     # Store the experience in the PPO agent
                     agent.remember(obs_flat, action, probs, value, updated_reward, done)
@@ -90,6 +94,9 @@ def main():
 
                     # Step the environment with the chosen action
                     env.step(action)
+                    # if env.terminations[agent_id]:
+                    #     player_1_rewards.append(-61)
+                    #     scores["player_1"] += -61
 
                     # Get the updated reward after the step
                     updated_reward= env.rewards[agent_id]
@@ -97,10 +104,6 @@ def main():
                     # Update rewards for debugging
                     player_2_rewards.append(updated_reward)
                     scores[agent_id] += updated_reward
-            else:
-                # For terminated agents, step with None
-                env.step(None)
-
             # Update terminations
             terminations = env.terminations
 
@@ -108,9 +111,9 @@ def main():
         agent.learn()
 
         # Print cumulative rewards for debugging
-        print(f"Episode {game + 1}/{n_games}")
-        print(f"Player 1 Total Rewards: {player_1_rewards}")
-        print(f"Player 2 Total Rewards: {player_2_rewards}")
+        # print(f"Episode {game + 1}/{n_games}")
+        # print(f"Player 1 Total Rewards: {player_1_rewards}")
+        # print(f"Player 2 Total Rewards: {player_2_rewards}")
     # Save the final model after all episodes
     save_ppo_checkpoint(agent, filename='ppo_checkpoint.pth', iteration=n_games)
     # print(f"Training completed. Best score: {max(all_scores)}")
