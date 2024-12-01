@@ -74,6 +74,7 @@ def train_against_agent(config):
     for _ in range(eval_episodes):
         env.reset()
         done = False
+        scores = {agent: 0 for agent in env.possible_agents}
         while not done:
             observation, reward, termination, truncation, info = env.last()
             done = termination or truncation
@@ -82,19 +83,23 @@ def train_against_agent(config):
                     obs_flat = observation["observation"].flatten()
                     action, _, _ = ppo_agent.choose_action(obs_flat, info)
                     env.step(action.item())
+                    updated_reward = env.rewards[env.agent_selection]
+                    scores[agent_id] += updated_reward
                 else:
                     action = BitSmartAgent().select_action(env, info)
                     env.step(action)
+                    updated_reward = env.rewards[env.agent_selection]
+                    scores[agent_id] += updated_reward
             else:
                 env.step(None)
-        if env.rewards["player_1"] > 0:
+        if scores["player_1"] > scores["player_2"]:
             wins += 1
 
     win_rate = wins / eval_episodes
-    tune.report(win_rate=win_rate)
+    tune.track.log(win_rate=win_rate)
 
 def main():
-    ray.init()
+    ray.init(num_gpus=1)
 
     config = {
         "gamma": tune.uniform(0.9, 0.99),
@@ -113,7 +118,7 @@ def main():
     )
 
     tuner = tune.Tuner(
-        tune.with_resources(train_against_agent, resources={"cpu": 2}),
+        tune.with_resources(train_against_agent, resources={"gpu": 1}),
         tune_config=tune.TuneConfig(
             metric="win_rate",
             mode="max",

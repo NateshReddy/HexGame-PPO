@@ -22,7 +22,7 @@ class Agent:
         self.actor = self.actor_critic.actor
         self.critic = self.actor_critic.critic
         self.memory = PPOBufferMemory(batch_size)  # Initialisierung des Speichers
-        self.device = T.device('cpu')
+        self.device = "cuda:0" if T.cuda.is_available() else "cpu"
         self.actor_critic.to(self.device)
 
     def remember(self, state, action, probs, vals, reward, done):

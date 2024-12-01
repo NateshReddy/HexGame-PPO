@@ -48,7 +48,7 @@ class ActorCriticNetwork(nn.Module):
 
         self.actor_optimizer = optim.Adam(self.parameters(), lr=actor_lr)
         self.critic_optimizer = optim.Adam(self.parameters(), lr=critic_lr)
-        self.device =  T.device('cpu')
+        self.device = "cuda:0" if T.cuda.is_available() else "cpu"
 
     def forward(self, state):
         dist = self.actor(state)
