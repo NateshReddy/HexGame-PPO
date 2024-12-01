@@ -8,7 +8,7 @@ from fhtw_hex.ppo_memory import PPOBufferMemory
 from fhtw_hex.acn import ActorCriticNetwork
 
 class Agent:
-    def __init__(self, n_actions, input_dims, gamma=0.99, alpha=0.0003, gae_lambda=0.95,
+    def __init__(self, n_actions, input_dims, gamma=0.99, actor_lr=0.0003, critic_lr=0.0003, gae_lambda=0.95,
                  policy_clip=0.2, batch_size=2, n_epochs=10, chkpt_dir="tmp/ppo", entropy_coef=0.01):
         self.gamma = gamma  # Diskontierungsfaktor
         self.policy_clip = policy_clip  # Clip-Wert für die PPO-Verlustfunktion
@@ -17,7 +17,7 @@ class Agent:
         self.chkpt_dir = chkpt_dir  # Initialisiere das Checkpoint-Verzeichnis
         self.entropy_coef = entropy_coef  # Koeffizient für den Entropy Bonus
 
-        self.actor_critic = ActorCriticNetwork(n_actions, input_dims, alpha,
+        self.actor_critic = ActorCriticNetwork(n_actions, input_dims, actor_lr, critic_lr,
                                   chkpt_dir=chkpt_dir)  # Initialisierung des Actor-Netzwerks
         self.actor = self.actor_critic.actor
         self.critic = self.actor_critic.critic

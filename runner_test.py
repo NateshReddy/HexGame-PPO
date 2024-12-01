@@ -8,7 +8,7 @@ from fhtw_hex.random_agent import RandomAgent
 
 # Parameters
 MODEL_PATH = "ppo_checkpoint.pth"
-NUM_GAMES = 1000  # Number of games to evaluate
+NUM_GAMES = 100  # Number of games to evaluate
 
 # Initialize environment
 env = OurHexGame(board_size=11, render_mode=None, sparse_flag=False)  # No rendering for speed
@@ -18,7 +18,8 @@ ppo_agent = Agent(
     n_actions=env.action_spaces[env.possible_agents[0]].n,
     input_dims=[env.board_size * env.board_size],
     gamma=0.99,
-    alpha=0.0003,
+    actor_lr=0.0003,
+    critic_lr=0.0003,
     gae_lambda=0.95,
     policy_clip=0.2,
     batch_size=64,
@@ -36,15 +37,6 @@ try:
 except FileNotFoundError:
     print(f"Model file not found at {MODEL_PATH}. Running with untrained PPO agent.")
 ppo_agent.actor.eval()
-
-# Define the random agent function
-# def random_agent(observation, info):
-#     """
-#     Random agent selects a valid action randomly.
-#     """
-#     action_mask = info["action_mask"]
-#     valid_actions = [i for i, valid in enumerate(action_mask) if valid]
-#     return random.choice(valid_actions)
 
 # Define the run_game function
 def run_game(ppo_agent, env, ppo_player=1):

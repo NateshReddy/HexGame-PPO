@@ -5,8 +5,24 @@ import torch.optim as optim
 from torch.distributions import Categorical
 import numpy as np
 
+class CategoricalMasked(Categorical):
+    """Masked categorical distribution for action selection."""
+    def __init__(self, probs: T.Tensor, mask: T.Tensor):
+        self.batch, self.nb_action = probs.size()
+        self.tensor_mask = T.stack([mask.bool()]*self.batch, dim=0)
+        self.all_zeros = T.zeros_like(probs)
+        masked_probs = T.where(self.tensor_mask, probs, self.all_zeros)
+        # Add epsilon to avoid division by zero
+        #masked_probs += 1e-8
+        
+        # Normalize probabilities
+        masked_probs /= masked_probs.sum(dim=-1, keepdim=True)
+        #normalized_probs = (self.all_zeros + 1e-8) / (self.all_zeros + 1e-8).sum(dim=-1, keepdim=True)
+        super().__init__(probs=masked_probs)
+
+
 class ActorCriticNetwork(nn.Module):
-    def __init__(self, n_actions, input_dims, alpha, fc1_dims=64, fc2_dims=64, chkpt_dir='tmp/ppo'):
+    def __init__(self, n_actions, input_dims, actor_lr, critic_lr, fc1_dims=64, fc2_dims=64, chkpt_dir='tmp/ppo'):
         super(ActorCriticNetwork, self).__init__()
 
         self.actor_checkpoint_file = f'{chkpt_dir}/actor_ppo'
@@ -30,8 +46,8 @@ class ActorCriticNetwork(nn.Module):
             nn.Linear(fc2_dims, 1)
         )
 
-        self.actor_optimizer = optim.Adam(self.parameters(), lr=alpha)
-        self.critic_optimizer = optim.Adam(self.parameters(), lr=alpha)
+        self.actor_optimizer = optim.Adam(self.parameters(), lr=actor_lr)
+        self.critic_optimizer = optim.Adam(self.parameters(), lr=critic_lr)
         self.device =  T.device('cpu')
 
     def forward(self, state):
@@ -67,6 +83,16 @@ class ActorCriticNetwork(nn.Module):
 
     def act(self, state: np.ndarray, mask: np.ndarray):
         """Compute action and log probabilities."""
+        # probs = self.actor(state)
+        # mask = T.from_numpy(mask).to(dtype=T.float32).to(self.device)
+        # distribution = CategoricalMasked(probs, mask)
+        # action = distribution.sample()
+        
+        # action_log_prob = distribution.log_prob(action)
+        # state_val = self.critic(state)
+
+        # return action.detach(), action_log_prob.detach(), state_val.detach()
+
         probs = self.actor(state)
         # Convert probs to numpy array
         probs_np = probs.detach().cpu().numpy().flatten()

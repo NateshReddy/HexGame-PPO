@@ -71,7 +71,7 @@ def main():
         n_epochs=10
     )
 
-    n_games = 50  # Total games to play
+    n_games = 500  # Total games to play
 
     for game in tqdm(range(n_games)):
         env.reset()
