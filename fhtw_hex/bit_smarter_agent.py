@@ -1,7 +1,7 @@
 import numpy as np
 
 class BitSmartAgent:
-    def select_action(env, agent_id, info):
+    def select_action(self, env, info):
         '''
             1. Prioritize moves closer to the center.
             2. Prioritize moves connecting agent to cells of its own color
@@ -9,7 +9,8 @@ class BitSmartAgent:
             4. Based on the agent direction
         '''
 
-        available_moves = env.action_space(agent_id).sample(info["action_mask"])
+        # available_moves = env.action_space(agent_id).sample(info["action_mask"])
+        available_moves = [i for i, valid in enumerate(info["action_mask"]) if valid]
 
         board = env.board
         board_size = board.shape[0]

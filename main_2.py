@@ -1,13 +1,12 @@
 from ourhexenv import OurHexGame  # Import your custom environment
 from fhtw_hex.ppo_smaller import Agent  # Import the PPO implementation from ppo_smaller
-from fhtw_hex.bit_smarter_agent import BitSmartAgent
-from fhtw_hex.random_agent import RandomAgent
 from fhtw_hex.reward_utils import compute_rewards, can_win_next_move  # Updated rewards utility
 import numpy as np
 import ipdb
 import torch
 from tqdm import tqdm
-
+from fhtw_hex.random_agent import RandomAgent
+from fhtw_hex.bit_smarter_agent import BitSmartAgent
 def save_ppo_checkpoint(agent, filename='ppo_checkpoint.pth', iteration=0):
     """
     Save the PPO agent's state in a checkpoint file.
@@ -30,9 +29,6 @@ def main():
     # Initialize the environment
     env = OurHexGame(board_size=11, sparse_flag=False, render_mode=None)
 
-    bitSmartAgent = BitSmartAgent()
-    randomAgent = RandomAgent()
-
     # PPO Agent Initialization
     agent = Agent(
         n_actions=env.action_spaces[env.possible_agents[0]].n - 1,
@@ -45,7 +41,10 @@ def main():
         n_epochs=10
     )
 
-    n_games = 2000  # Total games to play
+    randomAgent = RandomAgent()
+    bitSmartAgent = BitSmartAgent()
+
+    n_games = 5  # Total games to play
     win_rates = []  # Track win rates
 
     for game in tqdm(range(n_games)):
@@ -71,26 +70,33 @@ def main():
                     obs_flat = observation["observation"].flatten()
                     action, probs, value = agent.choose_action(obs_flat, False)
 
+                    # Step the environment with the chosen action
+                    env.step(action)
+
+                    # Get the updated reward after the step
+                    updated_reward = env.rewards[agent_id]
+
                     # Store the experience in the PPO agent
                     agent.remember(obs_flat, action, probs, value, updated_reward, done)
 
                     # Update rewards for debugging
                     player_1_rewards.append(updated_reward)
+                    scores[agent_id] += updated_reward
 
                 elif agent_id == "player_2":
                     # Randomly sample action for Player 2
-                    action = randomAgent.select_action(env, agent_id, info)
+                    # action = env.action_space(agent_id).sample(info["action_mask"])
+                    action = bitSmartAgent.select_action(env, info)
+
+                    # Step the environment with the chosen action
+                    env.step(action)
+
+                    # Get the updated reward after the step
+                    updated_reward= env.rewards[agent_id]
 
                     # Update rewards for debugging
                     player_2_rewards.append(updated_reward)
-
-                # Step the environment with the chosen action
-                env.step(action)
-
-                # Get the updated reward after the step
-                updated_reward = env.rewards[agent_id]
-
-                scores[agent_id] += updated_reward
+                    scores[agent_id] += updated_reward
             else:
                 # For terminated agents, step with None
                 env.step(None)
@@ -102,7 +108,7 @@ def main():
         agent.learn()
 
         # Print cumulative rewards for debugging
-        print(f"Episode {game + 1}/{n_games}")
+        # print(f"Episode {game + 1}/{n_games}")
         # print(f"Player 1 Total Rewards: {player_1_rewards}")
         # print(f"Player 2 Total Rewards: {player_2_rewards}")
     # Save the final model after all episodes

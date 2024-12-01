@@ -2,7 +2,10 @@ import random
 import torch
 from ourhexenv import OurHexGame
 from fhtw_hex.ppo_smaller import Agent
+# from fhtw_hex.ppo_torch import Agent
 from tqdm import tqdm
+from fhtw_hex.bit_smarter_agent import BitSmartAgent
+
 # Parameters
 MODEL_PATH = "ppo_checkpoint.pth"
 NUM_GAMES = 100  # Number of games to evaluate
@@ -22,6 +25,7 @@ ppo_agent = Agent(
     n_epochs=10
 )
 
+bitSmartAgent = BitSmartAgent()
 # Load trained PPO model
 try:
     checkpoint = torch.load(MODEL_PATH)
@@ -32,13 +36,13 @@ except FileNotFoundError:
 ppo_agent.actor.eval()
 
 # Define the random agent function
-def random_agent(observation, info):
-    """
-    Random agent selects a valid action randomly.
-    """
-    action_mask = info["action_mask"]
-    valid_actions = [i for i, valid in enumerate(action_mask) if valid]
-    return random.choice(valid_actions)
+# def random_agent(observation, info):
+#     """
+#     Random agent selects a valid action randomly.
+#     """
+#     action_mask = info["action_mask"]
+#     valid_actions = [i for i, valid in enumerate(action_mask) if valid]
+#     return random.choice(valid_actions)
 
 # Define the run_game function
 def run_game(ppo_agent, env, ppo_player=1):
@@ -70,7 +74,7 @@ def run_game(ppo_agent, env, ppo_player=1):
             obs_flat = observation["observation"].flatten()
             action, _, _ = ppo_agent.choose_action(obs_flat, False)  # PPO agent chooses an action
         else:
-            action = random_agent(observation, info)  # Random agent chooses an action
+            action = bitSmartAgent.select_action(env, info)
 
         env.step(action)
 
