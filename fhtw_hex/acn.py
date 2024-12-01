@@ -65,3 +65,32 @@ class ActorCriticNetwork(nn.Module):
                 f.write("\nParameters:\n")
                 for name, param in self.named_parameters():
                     f.write(f"{name}: {param.shape}\n")
+
+    def act(self, state: np.ndarray, mask: np.ndarray):
+        """Compute action and log probabilities."""
+        state = T.tensor(np.array([state]), dtype=T.float).to(self.device)
+        probs = self.actor(state)
+        # Convert probs to numpy array
+        probs_np = probs.detach().cpu().numpy().flatten()
+
+        # Apply mask
+        valid_actions = mask.astype(bool)
+        probs_np[~valid_actions] = 0
+
+        # Normalize probabilities
+        if np.sum(probs_np) > 0:
+            probs_np /= np.sum(probs_np)
+        else:
+            probs_np[valid_actions] = 1.0 / np.sum(valid_actions)
+
+        # Choose action
+        action = np.random.choice(len(probs_np), p=probs_np)
+
+        # Convert back to tensor
+        action_tensor = T.tensor([action], dtype=T.long).to(self.device)
+        probs_tensor = T.tensor([probs_np[action]], dtype=T.float).to(self.device)
+
+        # Compute log probability and state value
+        action_log_prob = T.log(probs_tensor)
+        state_val = self.critic(state)
+        return action_tensor.detach(), action_log_prob.detach(), state_val.detach()
