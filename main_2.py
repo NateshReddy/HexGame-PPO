@@ -44,7 +44,7 @@ def main():
     randomAgent = RandomAgent()
     bitSmartAgent = BitSmartAgent()
 
-    n_games = 5000 # Total games to play
+    n_games = 2000 # Total games to play
 
     for game in tqdm(range(n_games)):
         env.reset()
@@ -85,7 +85,7 @@ def main():
                 elif agent_id == "player_2":
                     # Randomly sample action for Player 2
                     # action = env.action_space(agent_id).sample(info["action_mask"])
-                    action = bitSmartAgent.select_action(env, info)
+                    action = randomAgent.select_action(env, info)
 
                     # Step the environment with the chosen action
                     env.step(action)

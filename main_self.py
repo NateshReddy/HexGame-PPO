@@ -16,15 +16,15 @@ def save_ppo_checkpoint(agent, filename='ppo_checkpoint.pth', iteration=0):
     """
     checkpoint = {
         'model_state_dict': agent.actor_critic.state_dict(),  # Save actor model state
-        'actor_optimizer_state_dict': agent.actor.optimizer.state_dict(),  # Save actor optimizer state
-        'critic_optimizer_state_dict': agent.critic.optimizer.state_dict(),  # Save critic optimizer state
+        'actor_optimizer_state_dict': agent.actor_critic.actor_optimizer.state_dict(),  # Save actor optimizer state
+        'critic_optimizer_state_dict': agent.actor_critic.critic_optimizer.state_dict(),  # Save critic optimizer state
         'iteration': iteration  # Store current iteration or epoch
     }
     torch.save(checkpoint, filename)
     print(f"Checkpoint saved at {filename}")
 
 
-def load_ppo_checkpoint(agent, filename='ppo_checkpoint.pth'):
+def load_ppo_checkpoint(agent, filename='ppo_checkpoint_agent2.pth'):
     """
     Load the PPO agent's state from a checkpoint file.
 
@@ -34,9 +34,9 @@ def load_ppo_checkpoint(agent, filename='ppo_checkpoint.pth'):
     """
     try:
         checkpoint = torch.load(filename)
-        agent.actor.load_state_dict(checkpoint['model_state_dict'])
-        agent.actor.optimizer.load_state_dict(checkpoint['actor_optimizer_state_dict'])
-        agent.critic.optimizer.load_state_dict(checkpoint['critic_optimizer_state_dict'])
+        agent.actor_critic.load_state_dict(checkpoint['model_state_dict'])
+        agent.actor_critic.actor_optimizer.load_state_dict(checkpoint['actor_optimizer_state_dict'])
+        agent.actor_critic.critic_optimizer.load_state_dict(checkpoint['critic_optimizer_state_dict'])
         print(f"Checkpoint loaded from {filename}")
     except FileNotFoundError:
         print(f"Checkpoint file not found at {filename}. Proceeding without loading.")
@@ -71,7 +71,7 @@ def main():
         n_epochs=10
     )
 
-    n_games = 50  # Total games to play
+    n_games = 500  # Total games to play
 
     for game in tqdm(range(n_games)):
         env.reset()
