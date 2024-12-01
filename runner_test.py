@@ -2,13 +2,12 @@ import random
 import torch
 from ourhexenv import OurHexGame
 from fhtw_hex.ppo_smaller import Agent
-# from fhtw_hex.ppo_torch import Agent
 from tqdm import tqdm
 from fhtw_hex.bit_smarter_agent import BitSmartAgent
 
 # Parameters
 MODEL_PATH = "ppo_checkpoint.pth"
-NUM_GAMES = 1000  # Number of games to evaluate
+NUM_GAMES = 100  # Number of games to evaluate
 
 # Initialize environment
 env = OurHexGame(board_size=11, render_mode=None, sparse_flag=False)  # No rendering for speed
@@ -26,10 +25,11 @@ ppo_agent = Agent(
 )
 
 bitSmartAgent = BitSmartAgent()
+
 # Load trained PPO model
 try:
     checkpoint = torch.load(MODEL_PATH)
-    ppo_agent.actor.load_state_dict(checkpoint['model_state_dict'])  # Load the actor model
+    ppo_agent.actor_critic.load_state_dict(checkpoint['model_state_dict'])  # Load the actor model
     print(f"Model loaded successfully from {MODEL_PATH}.")
 except FileNotFoundError:
     print(f"Model file not found at {MODEL_PATH}. Running with untrained PPO agent.")
@@ -72,7 +72,7 @@ def run_game(ppo_agent, env, ppo_player=1):
         # Select action based on the player
         if current_player == ppo_player:
             obs_flat = observation["observation"].flatten()
-            action, _, _ = ppo_agent.choose_action(obs_flat, False)  # PPO agent chooses an action
+            action, _, _ = ppo_agent.choose_action(obs_flat)  # PPO agent chooses an action
         else:
             action = bitSmartAgent.select_action(env, info)
 

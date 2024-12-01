@@ -173,35 +173,29 @@ class Agent:
         self.critic.load_checkpoint()
 
 
-    def choose_action(self, observation, allow_illegal_moves=False):
+    def choose_action(self, observation):
         state = T.tensor(np.array([observation]), dtype=T.float).to(self.actor.device)
         dist = self.actor(state)
         value = self.critic(state)
+        # Convert probabilities to NumPy array
+        probs = dist.probs.detach().cpu().numpy().flatten()
+        # Derive the valid actions mask from the state
+        valid_actions = observation.flatten() == 0  # Assuming 0 represents an empty spot
 
-        if allow_illegal_moves:
-            action = dist.sample()
-            probs = T.squeeze(dist.log_prob(action)).item()
-            action = T.squeeze(action).item()
+
+        # Mask invalid actions
+        mask = valid_actions.astype(bool)
+        probs[~mask] = 0
+
+        # Normalize the masked probabilities
+        if np.sum(probs) > 0:
+            probs /= np.sum(probs)
         else:
-            # Convert probabilities to NumPy array
-            probs = dist.probs.detach().cpu().numpy().flatten()
-            # Derive the valid actions mask from the state
-            valid_actions = observation.flatten() == 0  # Assuming 0 represents an empty spot
+            # If all probabilities are zero (which shouldn't happen), choose a random valid action
+            probs[mask] = 1.0 / np.sum(mask)
 
-
-            # Mask invalid actions
-            mask = valid_actions.astype(bool)
-            probs[~mask] = 0
-
-            # Normalize the masked probabilities
-            if np.sum(probs) > 0:
-                probs /= np.sum(probs)
-            else:
-                # If all probabilities are zero (which shouldn't happen), choose a random valid action
-                probs[mask] = 1.0 / np.sum(mask)
-
-            action = np.random.choice(len(probs), p=probs)
-            probs = T.tensor(probs[action]).to(self.actor.device)
+        action = np.random.choice(len(probs), p=probs)
+        probs = T.tensor(probs[action]).to(self.actor.device)
 
         value = T.squeeze(value).item()
         return action, probs, value

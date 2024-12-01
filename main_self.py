@@ -15,7 +15,7 @@ def save_ppo_checkpoint(agent, filename='ppo_checkpoint.pth', iteration=0):
         iteration: Current training iteration.
     """
     checkpoint = {
-        'model_state_dict': agent.actor.state_dict(),  # Save actor model state
+        'model_state_dict': agent.actor_critic.state_dict(),  # Save actor model state
         'actor_optimizer_state_dict': agent.actor.optimizer.state_dict(),  # Save actor optimizer state
         'critic_optimizer_state_dict': agent.critic.optimizer.state_dict(),  # Save critic optimizer state
         'iteration': iteration  # Store current iteration or epoch
@@ -94,7 +94,7 @@ def main():
                 if agent_id == "player_1":
                     # Agent 1 chooses an action
                     obs_flat = observation["observation"].flatten()
-                    action, probs, value = agent1.choose_action(obs_flat, False)
+                    action, probs, value = agent1.choose_action(obs_flat)
 
                     # Step the environment with the chosen action
                     env.step(action)
@@ -109,7 +109,7 @@ def main():
                 elif agent_id == "player_2":
                     # Agent 2 chooses an action
                     obs_flat = observation["observation"].flatten()
-                    action, probs, value = agent2.choose_action(obs_flat, False)
+                    action, probs, value = agent2.choose_action(obs_flat)
 
                     # Step the environment with the chosen action
                     env.step(action)

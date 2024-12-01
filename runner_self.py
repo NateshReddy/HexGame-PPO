@@ -8,7 +8,7 @@ from fhtw_hex.bit_smarter_agent import BitSmartAgent
 # Parameters
 MODEL_PATH_OLD = "ppo_checkpoint.pth"
 MODEL_PATH_NEW = "ppo_checkpoint_agent2.pth"
-NUM_GAMES = 1000  # Number of games to evaluate
+NUM_GAMES = 100  # Number of games to evaluate
 
 # Initialize environment
 env = OurHexGame(board_size=11, render_mode=None, sparse_flag=False)  # No rendering for speed
@@ -28,11 +28,11 @@ ppo_agent_old = Agent(
 # Load trained Old PPO model
 try:
     checkpoint = torch.load(MODEL_PATH_OLD)
-    ppo_agent_old.actor.load_state_dict(checkpoint['model_state_dict'])  # Load the actor model
+    ppo_agent_old.actor_critic.load_state_dict(checkpoint['model_state_dict'])  # Load the actor model
     print(f"Old model loaded successfully from {MODEL_PATH_OLD}.")
 except FileNotFoundError:
     print(f"Old model file not found at {MODEL_PATH_OLD}. Proceeding without old PPO agent.")
-ppo_agent_old.actor.eval()
+ppo_agent_old.actor_critic.eval()
 
 # Initialize New PPO Agent
 ppo_agent_new = Agent(
@@ -85,10 +85,10 @@ def run_game(agent_1, agent_2, env, agent_1_player=1):
         # Select action based on the player
         if current_player == agent_1_player:
             obs_flat = observation["observation"].flatten()
-            action, _, _ = agent_1.choose_action(obs_flat, False)  # Agent 1 chooses an action
+            action, _, _ = agent_1.choose_action(obs_flat)  # Agent 1 chooses an action
         else:
             obs_flat = observation["observation"].flatten()
-            action, _, _ = agent_2.choose_action(obs_flat, False)  # Agent 2 chooses an action
+            action, _, _ = agent_2.choose_action(obs_flat)  # Agent 2 chooses an action
 
         env.step(action)
 

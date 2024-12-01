@@ -5,100 +5,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.distributions.categorical import Categorical
 from fhtw_hex.ppo_memory import PPOBufferMemory
+from fhtw_hex.acn import ActorCriticNetwork
 
-
-# Neuronales Netzwerk für den Actor
-class ActorNetwork(nn.Module):
-    def __init__(self, n_actions, input_dims, alpha,
-                 fc1_dims=64, fc2_dims=64, chkpt_dir='tmp/ppo'):
-        super(ActorNetwork, self).__init__()
-
-        self.checkpoint_file = f'{chkpt_dir}/actor_torch_ppo'
-        os.makedirs(chkpt_dir, exist_ok=True)
-        self.actor = nn.Sequential(
-            nn.Linear(*input_dims, fc1_dims),  # Entpackt input_dims und übergibt es als Argument
-            nn.Tanh(),
-            nn.Linear(fc1_dims, fc2_dims),
-            nn.Tanh(),
-            nn.Linear(fc2_dims, n_actions),
-            nn.Softmax(dim=-1)
-        )
-
-        self.optimizer = optim.Adam(self.parameters(), lr=alpha)
-        self.device = T.device('cpu')
-        self.to(self.device)
-
-    def forward(self, state):
-        dist = self.actor(state)
-        dist = Categorical(dist)
-        return dist
-
-    def save_checkpoint(self):
-        T.save(self.state_dict(), self.checkpoint_file)
-
-    def load_checkpoint(self):
-        self.load_state_dict(T.load(self.checkpoint_file))
-
-    def update_checkpoint_dir(self, chkpt_dir):
-        self.checkpoint_file = os.path.join(chkpt_dir, 'actor_torch_ppo')
-        os.makedirs(chkpt_dir, exist_ok=True)
-
-    def print_info(self, file=None):
-        if file:
-            with open(file, 'a') as f:
-                f.write("Actor Network Architecture:\n")
-                f.write(str(self.actor) + "\n")
-                f.write("\nDevice: " + str(self.device) + "\n")
-                f.write("\nParameters:\n")
-                for name, param in self.named_parameters():
-                    f.write(f"{name}: {param.shape}\n")
-
-
-# Neuronales Netzwerk für den Kritiker
-class CriticNetwork(nn.Module):
-    def __init__(self, input_dims, alpha, fc1_dims=64, fc2_dims=64, chkpt_dir='tmp/ppo'):
-        super(CriticNetwork, self).__init__()
-
-        self.checkpoint_file = f'{chkpt_dir}/critic_torch_ppo'
-        os.makedirs(chkpt_dir, exist_ok=True)
-        self.critic = nn.Sequential(
-            nn.Linear(*input_dims, fc1_dims),  # Entpackt input_dims und übergibt es als Argument
-            nn.Tanh(),
-            nn.Linear(fc1_dims, fc2_dims),
-            nn.Tanh(),
-            nn.Linear(fc2_dims, 1)
-        )
-
-        self.optimizer = optim.Adam(self.parameters(), lr=alpha)
-        self.device = T.device('cpu')
-        self.to(self.device)
-
-    def forward(self, state):
-        value = self.critic(state)
-        return value
-
-    def save_checkpoint(self):
-        T.save(self.state_dict(), self.checkpoint_file)
-
-    def load_checkpoint(self):
-        self.load_state_dict(T.load(self.checkpoint_file))
-
-    def update_checkpoint_dir(self, chkpt_dir):
-        self.checkpoint_file = os.path.join(chkpt_dir, 'critic_torch_ppo')
-        os.makedirs(chkpt_dir, exist_ok=True)
-
-    def print_info(self, file=None):
-        if file:
-            with open(file, 'a') as f:
-                f.write("Critic Network Architecture:\n")
-                f.write(str(self.critic) + "\n")
-                f.write("\nDevice: " + str(self.device) + "\n")
-                f.write("\nParameters:\n")
-                for name, param in self.named_parameters():
-                    f.write(f"{name}: {param.shape}\n")
-
-
-# Agentenklasse, die den Actor und den Kritiker verwendet
 class Agent:
     def __init__(self, n_actions, input_dims, gamma=0.99, alpha=0.0003, gae_lambda=0.95,
                  policy_clip=0.2, batch_size=2, n_epochs=10, chkpt_dir="tmp/ppo", entropy_coef=0.01):
@@ -109,9 +17,10 @@ class Agent:
         self.chkpt_dir = chkpt_dir  # Initialisiere das Checkpoint-Verzeichnis
         self.entropy_coef = entropy_coef  # Koeffizient für den Entropy Bonus
 
-        self.actor = ActorNetwork(n_actions, input_dims, alpha,
+        self.actor_critic = ActorCriticNetwork(n_actions, input_dims, alpha,
                                   chkpt_dir=chkpt_dir)  # Initialisierung des Actor-Netzwerks
-        self.critic = CriticNetwork(input_dims, alpha, chkpt_dir=chkpt_dir)  # Initialisierung des Kritiker-Netzwerks
+        self.actor = self.actor_critic.actor
+        self.critic = self.actor_critic.critic
         self.memory = PPOBufferMemory(batch_size)  # Initialisierung des Speichers
 
     def remember(self, state, action, probs, vals, reward, done):
@@ -127,30 +36,26 @@ class Agent:
         self.actor.load_checkpoint()
         self.critic.load_checkpoint()
 
-    def choose_action(self, observation, allow_illegal_moves=False):
-        state = T.tensor(np.array([observation]), dtype=T.float).to(self.actor.device)
-        dist = self.actor(state)
+    def choose_action(self, observation):
+        state = T.tensor(np.array([observation]), dtype=T.float).to(self.actor_critic.device)
+        acts = self.actor(state)
+        dist = Categorical(acts)
         value = self.critic(state)
 
-        if allow_illegal_moves:
-            action = dist.sample()
-            probs = T.squeeze(dist.log_prob(action)).item()
-            action = T.squeeze(action).item()
+        probs = dist.probs.detach().cpu().numpy().flatten()
+        valid_actions = observation.flatten() == 0
+
+        mask = valid_actions.astype(bool)
+        # import ipdb; ipdb.set_trace()
+        probs[~mask] = 0
+
+        if np.sum(probs) > 0:
+            probs /= np.sum(probs)
         else:
-            probs = dist.probs.detach().cpu().numpy().flatten()
-            valid_actions = observation.flatten() == 0
+            probs[mask] = 1.0 / np.sum(mask)
 
-            mask = valid_actions.astype(bool)
-            # import ipdb; ipdb.set_trace()
-            probs[~mask] = 0
-
-            if np.sum(probs) > 0:
-                probs /= np.sum(probs)
-            else:
-                probs[mask] = 1.0 / np.sum(mask)
-
-            action = np.random.choice(len(probs), p=probs)
-            probs = T.tensor(probs[action]).to(self.actor.device)
+        action = np.random.choice(len(probs), p=probs)
+        probs = T.tensor(probs[action]).to(self.actor_critic.device)
 
         value = T.squeeze(value).item()
         return action, probs, value
@@ -159,19 +64,20 @@ class Agent:
         for _ in range(self.n_epochs):
             state_arr, action_arr, old_prob_arr, vals_arr, reward_arr, dones_arr, batches = self.memory.generate_batches()
 
-            values = T.tensor(vals_arr).to(self.actor.device)
+            values = T.tensor(vals_arr).to(self.actor_critic.device)
             advantage = np.zeros(len(reward_arr), dtype=np.float32)
 
             for t in range(len(reward_arr)):
                 advantage[t] = reward_arr[t] - values[t]
-            advantage = T.tensor(advantage).to(self.actor.device)
+            advantage = T.tensor(advantage).to(self.actor_critic.device)
 
             for batch in batches:
-                states = T.tensor(state_arr[batch], dtype=T.float).to(self.actor.device)
-                old_probs = T.tensor(old_prob_arr[batch]).to(self.actor.device)
-                actions = T.tensor(action_arr[batch], dtype=T.long).to(self.actor.device)
+                states = T.tensor(state_arr[batch], dtype=T.float).to(self.actor_critic.device)
+                old_probs = T.tensor(old_prob_arr[batch]).to(self.actor_critic.device)
+                actions = T.tensor(action_arr[batch], dtype=T.long).to(self.actor_critic.device)
 
                 dist = self.actor(states)
+                dist = Categorical(dist)
                 critic_value = self.critic(states)
 
                 critic_value = T.squeeze(critic_value)
@@ -192,11 +98,13 @@ class Agent:
                 critic_loss = critic_loss.mean()
 
                 total_loss = actor_loss + 0.5 * critic_loss
-                self.actor.optimizer.zero_grad()
-                self.critic.optimizer.zero_grad()
+                self.actor_critic.actor_optimizer.zero_grad()
+                self.actor_critic.critic_optimizer.zero_grad()
+
                 total_loss.backward()
-                self.actor.optimizer.step()
-                self.critic.optimizer.step()
+                
+                self.actor_critic.actor_optimizer.step()
+                self.actor_critic.critic_optimizer.step()
 
         self.memory.clear_memory()
 
