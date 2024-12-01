@@ -36,30 +36,10 @@ class Agent:
         self.actor.load_checkpoint()
         self.critic.load_checkpoint()
 
-    def choose_action(self, observation):
+    def choose_action(self, observation, info):
         state = T.tensor(np.array([observation]), dtype=T.float).to(self.actor_critic.device)
-        acts = self.actor(state)
-        dist = Categorical(acts)
-        value = self.critic(state)
-
-        probs = dist.probs.detach().cpu().numpy().flatten()
-        valid_actions = observation.flatten() == 0
-
-        mask = valid_actions.astype(bool)
-        # import ipdb; ipdb.set_trace()
-        probs[~mask] = 0
-
-        if np.sum(probs) > 0:
-            probs /= np.sum(probs)
-        else:
-            probs[mask] = 1.0 / np.sum(mask)
-
-        action = np.random.choice(len(probs), p=probs)
-        probs = T.tensor(probs[action]).to(self.actor_critic.device)
-
-        value = T.squeeze(value).item()
-        return action, probs, value
-
+        return self.actor_critic.act(state, info["action_mask"])
+       
     def learn(self):
         for _ in range(self.n_epochs):
             state_arr, action_arr, old_prob_arr, vals_arr, reward_arr, dones_arr, batches = self.memory.generate_batches()
@@ -76,6 +56,7 @@ class Agent:
                 old_probs = T.tensor(old_prob_arr[batch]).to(self.actor_critic.device)
                 actions = T.tensor(action_arr[batch], dtype=T.long).to(self.actor_critic.device)
 
+        
                 dist = self.actor(states)
                 dist = Categorical(dist)
                 critic_value = self.critic(states)

@@ -1,5 +1,4 @@
 import numpy as np
-
 class PPOBufferMemory:
     def __init__(self, batch_size):
         self.states = []

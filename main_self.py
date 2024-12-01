@@ -94,7 +94,7 @@ def main():
                 if agent_id == "player_1":
                     # Agent 1 chooses an action
                     obs_flat = observation["observation"].flatten()
-                    action, probs, value = agent1.choose_action(obs_flat)
+                    action, probs, value = agent1.choose_action(obs_flat), info
 
                     # Step the environment with the chosen action
                     env.step(action)
@@ -109,7 +109,7 @@ def main():
                 elif agent_id == "player_2":
                     # Agent 2 chooses an action
                     obs_flat = observation["observation"].flatten()
-                    action, probs, value = agent2.choose_action(obs_flat)
+                    action, probs, value = agent2.choose_action(obs_flat, info)
 
                     # Step the environment with the chosen action
                     env.step(action)

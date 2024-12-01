@@ -15,7 +15,7 @@ env = OurHexGame(board_size=11, render_mode=None, sparse_flag=False)  # No rende
 
 # Initialize PPO Agent
 ppo_agent = Agent(
-    n_actions=env.action_spaces[env.possible_agents[0]].n - 1,
+    n_actions=env.action_spaces[env.possible_agents[0]].n,
     input_dims=[env.board_size * env.board_size],
     gamma=0.99,
     alpha=0.0003,
@@ -74,7 +74,8 @@ def run_game(ppo_agent, env, ppo_player=1):
         # Select action based on the player
         if current_player == ppo_player:
             obs_flat = observation["observation"].flatten()
-            action, _, _ = ppo_agent.choose_action(obs_flat)  # PPO agent chooses an action
+            action, _, _ = ppo_agent.choose_action(obs_flat, info)  # PPO agent chooses an action
+            action = action.item()
         else:
             action = bitSmartAgent.select_action(env, info)
 

@@ -7,6 +7,7 @@ import torch
 from tqdm import tqdm
 from fhtw_hex.random_agent import RandomAgent
 from fhtw_hex.bit_smarter_agent import BitSmartAgent
+
 def save_ppo_checkpoint(agent, filename='ppo_checkpoint.pth', iteration=0):
     """
     Save the PPO agent's state in a checkpoint file.
@@ -31,7 +32,7 @@ def main():
 
     # PPO Agent Initialization
     agent = Agent(
-        n_actions=env.action_spaces[env.possible_agents[0]].n - 1,
+        n_actions=env.action_spaces[env.possible_agents[0]].n,
         input_dims=[env.board_size * env.board_size],
         gamma=0.99,
         alpha=0.0003,
@@ -67,13 +68,17 @@ def main():
                 if agent_id == "player_1":
                     # Choose an action for Player 1
                     obs_flat = observation["observation"].flatten()
-                    action, probs, value = agent.choose_action(obs_flat)
+                    action, probs, value = agent.choose_action(obs_flat, info)
 
                     # Step the environment with the chosen action
-                    env.step(action)
+                    env.step(action.item())
 
                     # Get the updated reward after the step
                     updated_reward = env.rewards[agent_id]
+                    # if env.terminations[agent_id]:
+                    #     player_2_rewards.append(-61)
+                    #     scores["player_2"] += -61
+
 
                     # Store the experience in the PPO agent
                     agent.remember(obs_flat, action, probs, value, updated_reward, done)
@@ -89,6 +94,9 @@ def main():
 
                     # Step the environment with the chosen action
                     env.step(action)
+                    # if env.terminations[agent_id]:
+                    #     player_1_rewards.append(-61)
+                    #     scores["player_1"] += -61
 
                     # Get the updated reward after the step
                     updated_reward= env.rewards[agent_id]
@@ -96,10 +104,6 @@ def main():
                     # Update rewards for debugging
                     player_2_rewards.append(updated_reward)
                     scores[agent_id] += updated_reward
-            else:
-                # For terminated agents, step with None
-                env.step(None)
-
             # Update terminations
             terminations = env.terminations
 
