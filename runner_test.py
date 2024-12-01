@@ -8,10 +8,10 @@ from fhtw_hex.bit_smarter_agent import BitSmartAgent
 
 # Parameters
 MODEL_PATH = "ppo_checkpoint.pth"
-NUM_GAMES = 100  # Number of games to evaluate
+NUM_GAMES = 1000  # Number of games to evaluate
 
 # Initialize environment
-env = OurHexGame(board_size=11, render_mode=None)  # No rendering for speed
+env = OurHexGame(board_size=11, render_mode=None, sparse_flag=False)  # No rendering for speed
 
 # Initialize PPO Agent
 ppo_agent = Agent(
