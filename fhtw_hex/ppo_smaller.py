@@ -4,53 +4,7 @@ import torch as T
 import torch.nn as nn
 import torch.optim as optim
 from torch.distributions.categorical import Categorical
-
-# Klasse zur Verwaltung des Speichers für PPO (Proximal Policy Optimization)
-class PPOMemory:
-    def __init__(self, batch_size):
-        # Initialisierung der Speicherlisten für Zustände, Aktionen, Wahrscheinlichkeiten, Werte, Belohnungen und 'done'-Flaggen
-        self.states = []
-        self.probs = []
-        self.vals = []
-        self.actions = []
-        self.rewards = []
-        self.dones = []
-
-        self.batch_size = batch_size  # Größe der Batches
-
-    # Methode zur Generierung von Batches aus den gespeicherten Erinnerungen
-    def generate_batches(self):
-        n_states = len(self.states)
-        batch_start = np.arange(0, n_states, self.batch_size)
-        indices = np.arange(n_states, dtype=np.int64)
-        np.random.shuffle(indices)
-        batches = [indices[i:i + self.batch_size] for i in batch_start]
-
-        return np.array(self.states), \
-            np.array(self.actions), \
-            np.array(self.probs), \
-            np.array(self.vals), \
-            np.array(self.rewards), \
-            np.array(self.dones), \
-            batches
-
-    # Methode zum Speichern einer Erinnerung
-    def store_memory(self, state, action, probs, vals, reward, done):
-        self.states.append(state)
-        self.actions.append(action)
-        self.probs.append(probs)
-        self.vals.append(vals)
-        self.rewards.append(reward)
-        self.dones.append(done)
-
-    # Methode zum Löschen aller gespeicherten Erinnerungen
-    def clear_memory(self):
-        self.states = []
-        self.probs = []
-        self.actions = []
-        self.rewards = []
-        self.dones = []
-        self.vals = []
+from fhtw_hex.ppo_memory import PPOBufferMemory
 
 
 # Neuronales Netzwerk für den Actor
@@ -158,7 +112,7 @@ class Agent:
         self.actor = ActorNetwork(n_actions, input_dims, alpha,
                                   chkpt_dir=chkpt_dir)  # Initialisierung des Actor-Netzwerks
         self.critic = CriticNetwork(input_dims, alpha, chkpt_dir=chkpt_dir)  # Initialisierung des Kritiker-Netzwerks
-        self.memory = PPOMemory(batch_size)  # Initialisierung des Speichers
+        self.memory = PPOBufferMemory(batch_size)  # Initialisierung des Speichers
 
     def remember(self, state, action, probs, vals, reward, done):
         self.memory.store_memory(state, action, probs, vals, reward, done)
