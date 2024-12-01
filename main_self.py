@@ -24,7 +24,7 @@ def save_ppo_checkpoint(agent, filename='ppo_checkpoint.pth', iteration=0):
     print(f"Checkpoint saved at {filename}")
 
 
-def load_ppo_checkpoint(agent, filename='ppo_checkpoint.pth'):
+def load_ppo_checkpoint(agent, filename='ppo_checkpoint_agent2.pth'):
     """
     Load the PPO agent's state from a checkpoint file.
 
@@ -71,7 +71,7 @@ def main():
         n_epochs=10
     )
 
-    n_games = 5  # Total games to play
+    n_games = 50  # Total games to play
 
     for game in tqdm(range(n_games)):
         env.reset()

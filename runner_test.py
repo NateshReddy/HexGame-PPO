@@ -4,10 +4,11 @@ from ourhexenv import OurHexGame
 from fhtw_hex.ppo_smaller import Agent
 from tqdm import tqdm
 from fhtw_hex.bit_smarter_agent import BitSmartAgent
+from fhtw_hex.random_agent import RandomAgent
 
 # Parameters
 MODEL_PATH = "ppo_checkpoint.pth"
-NUM_GAMES = 100  # Number of games to evaluate
+NUM_GAMES = 1000  # Number of games to evaluate
 
 # Initialize environment
 env = OurHexGame(board_size=11, render_mode=None, sparse_flag=False)  # No rendering for speed
@@ -25,6 +26,7 @@ ppo_agent = Agent(
 )
 
 bitSmartAgent = BitSmartAgent()
+randomAgent = RandomAgent()
 
 # Load trained PPO model
 try:

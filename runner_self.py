@@ -28,7 +28,7 @@ ppo_agent_old = Agent(
 # Load trained Old PPO model
 try:
     checkpoint = torch.load(MODEL_PATH_OLD)
-    ppo_agent_old.actor_critic.load_state_dict(checkpoint['model_state_dict'])  # Load the actor model
+    ppo_agent_old.actor_critic.load_state_dict(checkpoint['model_state_dict'])
     print(f"Old model loaded successfully from {MODEL_PATH_OLD}.")
 except FileNotFoundError:
     print(f"Old model file not found at {MODEL_PATH_OLD}. Proceeding without old PPO agent.")
