@@ -101,20 +101,21 @@ def evaluate_agent(env, agent, episodes=100):
         done = False
         scores = {agent: 0 for agent in env.possible_agents}
         while not done:
+            agent_id = env.agent_selection
             observation, reward, termination, truncation, info = env.last()
             done = termination or truncation
             if not done:
-                if env.agent_selection == "player_1":
+                if agent_id == "player_1":
                     obs_flat = observation["observation"].flatten()
                     action, _, _ = agent.choose_action(obs_flat, info)
                     env.step(action.item())
-                    updated_reward = env.rewards[env.agent_selection]
-                    scores["player_1"] += updated_reward
+                    updated_reward = env.rewards[agent_id]
+                    scores[agent_id] += updated_reward
                 else:
                     action = BitSmartAgent().select_action(env, info)
                     env.step(action)
-                    updated_reward = env.rewards[env.agent_selection]
-                    scores["player_2"] += updated_reward
+                    updated_reward = env.rewards[agent_id]
+                    scores[agent_id] += updated_reward
             else:
                 env.step(None)
         if scores["player_1"] > scores["player_2"]:
@@ -170,14 +171,28 @@ def main():
 
     # Self-play training
     print("\nTraining through self-play...")
-    train_against_agent(env, ppo_agent, agent2, episodes=5000)
+    train_against_agent(env, ppo_agent, agent2, episodes=2000)
 
     # Save the final self-play model
     save_ppo_checkpoint(ppo_agent, filename='ppo_checkpoint_final.pth', iteration=2000)
-
-    # Evaluate final model
     evaluate_agent(env, ppo_agent)
 
-
 if __name__ == "__main__":
-    main()
+    # main()
+    env = OurHexGame(board_size=11, sparse_flag=False, render_mode=None)
+
+    # Initialize PPO Agent with fixed parameters
+    ppo_agent = Agent(
+        n_actions=env.action_spaces[env.possible_agents[0]].n,
+        input_dims=[env.board_size * env.board_size],
+        gamma=0.99,
+        actor_lr=0.0003,
+        critic_lr=0.0003,
+        gae_lambda=0.95,
+        policy_clip=0.2,
+        batch_size=64,
+        n_epochs=10
+    )
+    load_ppo_checkpoint(ppo_agent, filename='ppo_checkpoint_final.pth')
+    # Evaluate final model
+    evaluate_agent(env, ppo_agent)
