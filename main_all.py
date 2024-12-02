@@ -96,7 +96,8 @@ def train_against_agent(config):
             wins += 1
 
     win_rate = wins / eval_episodes
-    tune.track.log(win_rate=win_rate)
+    # tune.report(win_rate=win_rate)
+    ray.train.report({"win_rate":win_rate})
 
 def main():
     ray.init(num_gpus=1)
@@ -128,7 +129,7 @@ def main():
         param_space=config,
     )
 
-    results = tuner.fit()
+    results = tuner.fit() 
 
     best_trial = results.get_best_trial("win_rate", "max", "last")
     print("Best trial config:", best_trial.config)
