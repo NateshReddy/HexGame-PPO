@@ -70,9 +70,7 @@ def run_game(agent_1, agent_2, env, agent_1_player=1):
 
         # Select action based on the player
         if current_player == agent_1_player:
-            obs_flat = observation["observation"].flatten()
-            action, _, _ = agent_1.choose_action(obs_flat, info)  # Agent 1 chooses an action
-            action = action.item()
+            action = agent_1.select_action(observation, reward, terminated, truncated, info)
         else:
             # obs_flat = observation["observation"].flatten()
             action = agent_2.select_action(observation, reward, terminated, truncated, info)  # Agent 2 chooses an action
@@ -99,9 +97,9 @@ def evaluate_agents(agent_1, agent_2, env, num_games=50):
     """
     agent_1_wins = 0
     for _ in tqdm(range(num_games)):
-        agent_1_player = random.choice([1, 2])  # Randomly assign Agent 1 as player 1 or 2
-        winner = run_game(agent_1, agent_2, env, agent_1_player=agent_1_player)
-        if winner == agent_1_player:
+        # agent_1_player = random.choice([1, 2])  # Randomly assign Agent 1 as player 1 or 2
+        winner = run_game(agent_1, agent_2, env, agent_1_player=1)
+        if winner == 1:
             agent_1_wins += 1
     
     win_rate = agent_1_wins / num_games
@@ -109,4 +107,4 @@ def evaluate_agents(agent_1, agent_2, env, num_games=50):
 
 # Run the evaluation
 win_rate = evaluate_agents(ppo_agent_old, ppo_agent_g03, env, num_games=NUM_GAMES)
-print(f"New PPO Agent Win Rate against Old PPO Agent: {win_rate * 100:.2f}% over {NUM_GAMES} games.")
+print(f"Agent 1 win rate: {win_rate * 100:.2f}% over {NUM_GAMES} games.")

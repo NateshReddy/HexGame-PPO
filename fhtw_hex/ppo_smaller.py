@@ -199,7 +199,8 @@ class Agent:
             self.critic.print_info(file)
 
     def select_action(self, observation, reward, termination, truncation, info):
-        return self.choose_action(observation["observation"].flatten(), info)
+        action, _, _ = self.choose_action(observation["observation"].flatten(), info)
+        return action.item()
 
     @classmethod
     def from_file(cls, filename, env):
