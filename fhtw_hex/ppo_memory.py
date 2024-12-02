@@ -3,6 +3,7 @@ import torch
 
 class PPOBufferMemory:
     def __init__(self, batch_size):
+        # Initialize empty lists to store experience data
         self.states = []
         self.probs = []
         self.vals = []
@@ -10,22 +11,23 @@ class PPOBufferMemory:
         self.rewards = []
         self.dones = []
 
-        self.batch_size = batch_size  
+        self.batch_size = batch_size  # Set the batch size for training
 
     def generate_batches(self):
         n_states = len(self.states)
         
+        # Return empty values if there are no stored states
         if n_states == 0:
-            return None, None, None, None, None, None, []  # Return empty if no states
+            return None, None, None, None, None, None, []
 
-        # Create indices and shuffle them
+        # Create and shuffle indices for random sampling
         indices = np.arange(n_states, dtype=np.int64)
         np.random.shuffle(indices)
 
-        # Create batches
+        # Create batches of indices
         batches = [indices[i:i + self.batch_size] for i in range(0, n_states, self.batch_size)]
 
-        # Convert lists to NumPy arrays (move CUDA tensors to CPU if necessary)
+        # Convert stored data to NumPy arrays, moving CUDA tensors to CPU if necessary
         return (
             np.array([state.cpu().numpy() if isinstance(state, torch.Tensor) and state.is_cuda else state for state in self.states]),
             np.array([action.cpu().numpy() if isinstance(action, torch.Tensor) and action.is_cuda else action for action in self.actions]),
@@ -37,6 +39,7 @@ class PPOBufferMemory:
         )
 
     def store_memory(self, state, action, probs, vals, reward, done):
+        # Store a single step of experience data
         self.states.append(state)
         self.actions.append(action)
         self.probs.append(probs)
@@ -45,6 +48,7 @@ class PPOBufferMemory:
         self.dones.append(done)
 
     def clear_memory(self):
+        # Clear all stored experience data
         self.states.clear()
         self.probs.clear()
         self.actions.clear()
