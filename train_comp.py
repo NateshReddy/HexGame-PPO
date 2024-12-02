@@ -160,7 +160,7 @@ def main():
 
     # Self-play training
     print("\nTraining through self-play...")
-    train_against_agent(env, ppo_agent, agent2, episodes=2000)
+    train_against_agent(env, ppo_agent, agent2, episodes=5000)
 
     # Save the intermediate model after self-play
     save_ppo_checkpoint(ppo_agent, filename='ppo_checkpoint_after_selfplay.pth')
