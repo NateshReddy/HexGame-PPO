@@ -4,7 +4,7 @@ from ppo_hex.ppo_agent import Agent
 from tqdm import tqdm
 from ppo_hex.random_agent import RandomAgent
 from ppo_hex.bit_smarter_agent import BitSmartAgent
-from agent_group3.g03agent import G03Agent  # Import the new agent
+# from agent_group3.g03agent import G03Agent  # Import the new agent
 
 def save_ppo_checkpoint(agent, filename='ppo_checkpoint.pth', iteration=0):
     """Save the PPO agent's state in a checkpoint file."""
@@ -70,11 +70,11 @@ def train_against_agent(env, agent1, agent2, episodes):
                     if current_agent == agent1:
                         agent1.remember(obs_flat, action, probs, value, updated_reward, done)
                     scores[agent_id] += updated_reward
-                elif isinstance(current_agent, G03Agent):  # For G03Agent
-                    action = current_agent.select_action(observation, reward, terminated, truncated, info)
-                    env.step(action)
-                    updated_reward = env.rewards[agent_id]
-                    scores[agent_id] += updated_reward
+                # elif isinstance(current_agent, G03Agent):  # For G03Agent
+                #     action = current_agent.select_action(observation, reward, terminated, truncated, info)
+                #     env.step(action)
+                #     updated_reward = env.rewards[agent_id]
+                #     scores[agent_id] += updated_reward
                 else:  # RandomAgent or BitSmartAgent
                     action = current_agent.select_action(env, info)
                     env.step(action)
@@ -171,15 +171,15 @@ def main():
     # Save the intermediate model after self-play
     save_ppo_checkpoint(ppo_agent, filename='ppo_checkpoint_after_selfplay.pth')
 
-    # Load G03Agent and its model
-    print("\nLoading G03Agent...")
-    ppo_agent_g03 = G03Agent(env)
-    MODEL_PATH_NEW = "agent_group3/trained_dense_agent.pth"
-    ppo_agent_g03.load_model(MODEL_PATH_NEW)
+    # # Load G03Agent and its model
+    # print("\nLoading G03Agent...")
+    # ppo_agent_g03 = G03Agent(env)
+    # MODEL_PATH_NEW = "agent_group3/trained_dense_agent.pth"
+    # ppo_agent_g03.load_model(MODEL_PATH_NEW)
 
-    # Train PPO agent against G03Agent
-    print("\nTraining against G03Agent...")
-    train_against_agent(env, ppo_agent, ppo_agent_g03, episodes=2000)
+    # # Train PPO agent against G03Agent
+    # print("\nTraining against G03Agent...")
+    # train_against_agent(env, ppo_agent, ppo_agent_g03, episodes=2000)
 
     # Save the final model
     save_ppo_checkpoint(ppo_agent, filename='ppo_checkpoint_final.pth', iteration=2000)

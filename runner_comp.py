@@ -70,7 +70,7 @@ def run_game(agent_1, agent_2, env, agent_1_player=1):
 
         # Select action based on the player
         if current_player == agent_1_player:
-            action, _, _ = agent_1.select_action(observation, reward, terminated, truncated, info)  # Agent 1 chooses an action
+            action = agent_1.select_action(observation, reward, terminated, truncated, info)  # Agent 1 chooses an action
         else:
             action = agent_2.select_action(observation, reward, terminated, truncated, info)  # Agent 2 chooses an action
 

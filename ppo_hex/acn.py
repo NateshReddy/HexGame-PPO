@@ -20,11 +20,16 @@ import numpy as np
 #         #normalized_probs = (self.all_zeros + 1e-8) / (self.all_zeros + 1e-8).sum(dim=-1, keepdim=True)
 #         super().__init__(probs=masked_probs)
 
+import os
+import torch as T
+import torch.nn as nn
+import torch.optim as optim
+from torch.distributions.categorical import Categorical
 
 class ActorCriticNetwork(nn.Module):
-    def __init__(self, n_actions, input_dims, actor_lr, critic_lr, fc1_dims=64, fc2_dims=64, chkpt_dir='tmp/ppo'):
+    def __init__(self, n_actions, input_dims, actor_alpha, critic_alpha,
+                 fc1_dims=512, fc2_dims=512, fc3_dims=256, fc4_dims=256, chkpt_dir='tmp/ppo'):
         super(ActorCriticNetwork, self).__init__()
-        self.action_counts = np.zeros(n_actions)
 
         self.actor_checkpoint_file = f'{chkpt_dir}/actor_ppo'
         self.critic_checkpoint_file = f'{chkpt_dir}/critic_ppo'
@@ -32,19 +37,84 @@ class ActorCriticNetwork(nn.Module):
 
         self.actor = nn.Sequential(
             nn.Linear(*input_dims, fc1_dims),
-            nn.Tanh(),
+            nn.ReLU(),
             nn.Linear(fc1_dims, fc2_dims),
-            nn.Tanh(),
-            nn.Linear(fc2_dims, n_actions),
+            nn.ReLU(),
+            nn.Linear(fc2_dims, fc3_dims),
+            nn.ReLU(),
+            nn.Linear(fc3_dims, fc4_dims),
+            nn.ReLU(),
+            nn.Linear(fc4_dims, n_actions),
             nn.Softmax(dim=-1)
         )
 
         self.critic = nn.Sequential(
             nn.Linear(*input_dims, fc1_dims),
-            nn.Tanh(),
+            nn.ReLU(),
             nn.Linear(fc1_dims, fc2_dims),
-            nn.Tanh(),
-            nn.Linear(fc2_dims, 1)
+            nn.ReLU(),
+            nn.Linear(fc2_dims, fc3_dims),
+            nn.ReLU(),
+            nn.Linear(fc3_dims, fc4_dims),
+            nn.ReLU(),
+            nn.Linear(fc4_dims, 1)
+        )
+
+        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=actor_alpha)
+        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=critic_alpha)
+        self.device = T.device('cpu')
+        self.to(self.device)
+
+
+class ActorCriticNetwork(nn.Module):
+    def __init__(self, n_actions, input_dims, actor_lr, critic_lr, fc1_dims=512, fc2_dims=512, fc3_dims=256, fc4_dims=256, chkpt_dir='tmp/ppo'):
+        super(ActorCriticNetwork, self).__init__()
+        self.action_counts = np.zeros(n_actions)
+
+        self.actor_checkpoint_file = f'{chkpt_dir}/actor_ppo'
+        self.critic_checkpoint_file = f'{chkpt_dir}/critic_ppo'
+        os.makedirs(chkpt_dir, exist_ok=True)
+
+        # self.actor = nn.Sequential(
+        #     nn.Linear(*input_dims, fc1_dims),
+        #     nn.Tanh(),
+        #     nn.Linear(fc1_dims, fc2_dims),
+        #     nn.Tanh(),
+        #     nn.Linear(fc2_dims, n_actions),
+        #     nn.Softmax(dim=-1)
+        # )
+
+        # self.critic = nn.Sequential(
+        #     nn.Linear(*input_dims, fc1_dims),
+        #     nn.Tanh(),
+        #     nn.Linear(fc1_dims, fc2_dims),
+        #     nn.Tanh(),
+        #     nn.Linear(fc2_dims, 1)
+        # )
+
+        self.actor = nn.Sequential(
+            nn.Linear(*input_dims, fc1_dims),
+            nn.ReLU(),
+            nn.Linear(fc1_dims, fc2_dims),
+            nn.ReLU(),
+            nn.Linear(fc2_dims, fc3_dims),
+            nn.ReLU(),
+            nn.Linear(fc3_dims, fc4_dims),
+            nn.ReLU(),
+            nn.Linear(fc4_dims, n_actions),
+            nn.Softmax(dim=-1)
+        )
+
+        self.critic = nn.Sequential(
+            nn.Linear(*input_dims, fc1_dims),
+            nn.ReLU(),
+            nn.Linear(fc1_dims, fc2_dims),
+            nn.ReLU(),
+            nn.Linear(fc2_dims, fc3_dims),
+            nn.ReLU(),
+            nn.Linear(fc3_dims, fc4_dims),
+            nn.ReLU(),
+            nn.Linear(fc4_dims, 1)
         )
 
         self.actor_optimizer = optim.Adam(self.parameters(), lr=actor_lr)
