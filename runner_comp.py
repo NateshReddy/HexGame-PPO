@@ -1,9 +1,9 @@
 import random
 import torch
 from ourhexenv import OurHexGame
-from fhtw_hex.ppo_smaller import Agent
+from ppo_hex.ppo_agent import Agent
 from tqdm import tqdm
-from fhtw_hex.bit_smarter_agent import BitSmartAgent
+from ppo_hex.bit_smarter_agent import BitSmartAgent
 from agent_group12.g12agent import G12Agent, load_model
 from agent_group3.g03agent import G03Agent
 
@@ -70,11 +70,8 @@ def run_game(agent_1, agent_2, env, agent_1_player=1):
 
         # Select action based on the player
         if current_player == agent_1_player:
-            obs_flat = observation["observation"].flatten()
-            action, _, _ = agent_1.choose_action(obs_flat, info)  # Agent 1 chooses an action
-            action = action.item()
+            action, _, _ = agent_1.select_action(observation, reward, terminated, truncated, info)  # Agent 1 chooses an action
         else:
-            # obs_flat = observation["observation"].flatten()
             action = agent_2.select_action(observation, reward, terminated, truncated, info)  # Agent 2 chooses an action
 
         env.step(action)

@@ -1,6 +1,6 @@
 from ourhexenv import OurHexGame
 from g06agent import G06Agent
-from fhtw_hex.bit_smarter_agent import BitSmartAgent
+from ppo_hex.bit_smarter_agent import BitSmartAgent
 import random
 
 env = OurHexGame(board_size=11)

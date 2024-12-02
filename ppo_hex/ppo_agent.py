@@ -4,8 +4,8 @@ import torch as T
 import torch.nn as nn
 import torch.optim as optim
 from torch.distributions.categorical import Categorical
-from fhtw_hex.ppo_memory import PPOBufferMemory
-from fhtw_hex.acn import ActorCriticNetwork
+from ppo_hex.ppo_memory import PPOBufferMemory
+from ppo_hex.acn import ActorCriticNetwork
 
 class Agent:
     def __init__(self, n_actions, input_dims, gamma=0.99, actor_lr=0.0003, critic_lr=0.0003, gae_lambda=0.95,
@@ -199,7 +199,8 @@ class Agent:
             self.critic.print_info(file)
 
     def select_action(self, observation, reward, termination, truncation, info):
-        return self.choose_action(observation["observation"].flatten(), info)
+        action, _, _ = self.choose_action(observation["observation"].flatten(), info)
+        return action.item()
 
     @classmethod
     def from_file(cls, filename, env):

@@ -1,9 +1,9 @@
 import torch
 from ourhexenv import OurHexGame
-from fhtw_hex.ppo_smaller import Agent
+from ppo_hex.ppo_agent import Agent
 from tqdm import tqdm
-from fhtw_hex.random_agent import RandomAgent
-from fhtw_hex.bit_smarter_agent import BitSmartAgent
+from ppo_hex.random_agent import RandomAgent
+from ppo_hex.bit_smarter_agent import BitSmartAgent
 from agent_group3.g03agent import G03Agent  # Import the new agent
 
 def save_ppo_checkpoint(agent, filename='ppo_checkpoint.pth', iteration=0):
