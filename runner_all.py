@@ -18,11 +18,14 @@ ppo_agent = Agent(
     n_actions=env.action_spaces[env.possible_agents[0]].n,
     input_dims=[env.board_size * env.board_size],
     gamma=0.99,
-    alpha=0.0003,
+    actor_lr=0.0003,  # Updated parameter for actor learning rate
+    critic_lr=0.0003,  # Updated parameter for critic learning rate
     gae_lambda=0.95,
     policy_clip=0.2,
     batch_size=64,
-    n_epochs=10
+    n_epochs=10,
+    entropy_coef=0.01,  # Added entropy coefficient
+    chkpt_dir="tmp/ppo"  # Directory for saving model checkpoints
 )
 
 # Load trained PPO model
