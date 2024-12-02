@@ -1,9 +1,9 @@
 import torch
 from ourhexenv import OurHexGame
-from ppo_hex.ppo_agent import Agent
+from agents.ppo_agent import Agent
 from tqdm import tqdm
-from ppo_hex.random_agent import RandomAgent
-from ppo_hex.bit_smarter_agent import BitSmartAgent
+from agents.random_agent import RandomAgent
+from agents.bit_smarter_agent import BitSmartAgent
 from agent_group3.g03agent import G03Agent  # Import the G03Agent
 
 def save_ppo_checkpoint(agent, filename='ppo_checkpoint.pth', iteration=0):
@@ -114,8 +114,8 @@ def main():
     MODEL_PATH_NEW = "agent_group3/trained_dense_agent.pth"
     ppo_agent_g03.load_model(MODEL_PATH_NEW)
 
-    # Train PPO agent against G03Agent
-    print("\nTraining against G03Agent...")
+    # Train PPO agent against competing agent
+    print("\nTraining against competing Agent...")
     train_against_agent(env, ppo_agent, ppo_agent_g03, episodes=2000)
 
     # Save the final model

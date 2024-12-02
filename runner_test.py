@@ -1,10 +1,10 @@
 import random
 import torch
 from ourhexenv import OurHexGame
-from ppo_hex.ppo_agent import Agent
+from agents.ppo_agent import Agent
 from tqdm import tqdm
-from ppo_hex.bit_smarter_agent import BitSmartAgent
-from ppo_hex.random_agent import RandomAgent
+from agents.bit_smarter_agent import BitSmartAgent
+from agents.random_agent import RandomAgent
 
 # Parameters
 MODEL_PATH = "ppo_checkpoint.pth"

@@ -1,5 +1,6 @@
 import math
 import warnings
+import functools
 import pygame
 import numpy as np
 from typing import Dict
@@ -76,6 +77,15 @@ class UnionFind:
             else:
                 self.parent[rootY] = rootX
                 self.rank[rootX] += 1
+
+    def __eq__(self, other):
+        return (self.rank == other.rank) and (self.parent == other.parent)
+
+    def __copy__(self):
+        deep_copy = UnionFind(len(self.parent))
+        deep_copy.rank = self.rank.copy()
+        deep_copy.parent = self.parent.copy()
+        return deep_copy
 
 
 class OurHexGame(AECEnv):
@@ -166,6 +176,14 @@ class OurHexGame(AECEnv):
         self.left_virtual = self.top_virtual + 2  # player_2 owns left + right nodes
         self.right_virtual = self.top_virtual + 3
 
+    @functools.lru_cache(maxsize=128)
+    def observation_space(self, agent):
+        return self.observation_spaces[agent]
+
+    @functools.lru_cache(maxsize=128)
+    def action_space(self, agent):
+        return self.action_spaces[agent]
+
     def reset(self, seed: int = None, options: dict = {}):
         self.board = np.zeros((self.board_size, self.board_size), dtype=int)
         self.agents = self.possible_agents[:]
@@ -218,8 +236,11 @@ class OurHexGame(AECEnv):
             self.is_pie_rule_used = True
             x, y = np.where(self.board == 1)
             row, col = x[0], y[0]
-            self.board[row][col] = 0
-            self.board[col][row] = 2
+            # Reset both the board and UF structure before placing the piece
+            self.board = np.zeros((self.board_size, self.board_size), dtype=int)
+            self.uf = UnionFind(self.board_size * self.board_size + 4)
+            self.place_piece(col, row, 2)
+
         else:
             row, col = divmod(action, self.board_size)
 
@@ -239,8 +260,6 @@ class OurHexGame(AECEnv):
                 }
             else:
                 move_r = self.reward_mapping["MOVE"]
-                # import ipdb; ipdb.set_trace()
-                # import ipdb; ipdb.set_trace()
                 self.rewards = {agent: move_r for agent in self.agents}
                 self.terminations = {agent: False for agent in self.agents}
 
@@ -288,7 +307,7 @@ class OurHexGame(AECEnv):
             if col == self.board_size - 1:
                 self.uf.union(pos, self.right_virtual)
 
-        self.board[row, col] = marker
+        self.board[row][col] = marker
 
     def check_winner(self, player):
         """
@@ -303,7 +322,7 @@ class OurHexGame(AECEnv):
 
     def observe(self, agent):
         return {
-            "observation": self.board,
+            "observation": self.board.copy(),
             "pie_rule_used": 1 if self.is_pie_rule_used else 0,
         }
 
@@ -434,3 +453,42 @@ class OurHexGame(AECEnv):
         if self.window is not None:
             self.window = None
             self.clock = None
+
+    def __copy__(self):
+        env_deep_copy = OurHexGame()
+        env_deep_copy.board = self.board.copy()
+        env_deep_copy.agents = self.agents.copy()
+
+        env_deep_copy.is_first = self.is_first
+        env_deep_copy.is_pie_rule_usable = self.is_pie_rule_usable
+        env_deep_copy.is_pie_rule_used = self.is_pie_rule_used
+
+        env_deep_copy.dones = self.dones.copy()
+        env_deep_copy.infos = self.infos.copy()
+        env_deep_copy._cumulative_rewards = self._cumulative_rewards.copy()
+        env_deep_copy.terminations = self.terminations.copy()
+        env_deep_copy.truncations = self.truncations.copy()
+        env_deep_copy.rewards = self.rewards.copy()
+
+        env_deep_copy.uf = self.uf.__copy__()
+        env_deep_copy.agent_selector = self.agent_selector
+        env_deep_copy.agent_selection = self.agent_selection
+
+        return env_deep_copy
+
+    def __eq__(self, other):
+        return (
+            (self.board == other.board).all() and
+            self.agents == other.agents and
+            self.is_first == other.is_first and
+            self.is_pie_rule_usable == other.is_pie_rule_usable and
+            self.is_pie_rule_used == other.is_pie_rule_used and
+            self.dones == other.dones and
+            self.infos == other.infos and
+            self._cumulative_rewards == other._cumulative_rewards and
+            self.terminations == other.terminations and
+            self.truncations == other.truncations and
+            self.rewards == other.rewards and
+            self.uf == other.uf and
+            self.agent_selector == other.agent_selector and
+            self.agent_selection == other.agent_selection)

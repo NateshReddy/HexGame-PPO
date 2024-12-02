@@ -1,9 +1,9 @@
 import torch
 from ourhexenv import OurHexGame
-from ppo_hex.ppo_agent import Agent
+from agents.ppo_agent import Agent
 from tqdm import tqdm
-from ppo_hex.random_agent import RandomAgent
-from ppo_hex.bit_smarter_agent import BitSmartAgent
+from agents.random_agent import RandomAgent
+from agents.bit_smarter_agent import BitSmartAgent
 # from agent_group3.g03agent import G03Agent  # Import the new agent
 
 def save_ppo_checkpoint(agent, filename='ppo_checkpoint.pth', iteration=0):
@@ -43,7 +43,7 @@ def train_against_agent(env, agent1, agent2, episodes):
     """
     for episode in tqdm(range(episodes), desc="Training Episodes"):
         env.reset()
-        terminations = {agent: False for agent in env.possible_agents}
+        done = False
         scores = {agent: 0 for agent in env.possible_agents}
 
         # Determine roles based on episode number
@@ -52,7 +52,7 @@ def train_against_agent(env, agent1, agent2, episodes):
         else:
             p1_agent, p2_agent = agent2, agent1  # Agent1 as player_2
 
-        while not all(terminations.values()):
+        while not done:
             agent_id = env.agent_selection
             observation, reward, terminated, truncated, info = env.last()
             done = terminated or truncated
@@ -70,11 +70,6 @@ def train_against_agent(env, agent1, agent2, episodes):
                     if current_agent == agent1:
                         agent1.remember(obs_flat, action, probs, value, updated_reward, done)
                     scores[agent_id] += updated_reward
-                # elif isinstance(current_agent, G03Agent):  # For G03Agent
-                #     action = current_agent.select_action(observation, reward, terminated, truncated, info)
-                #     env.step(action)
-                #     updated_reward = env.rewards[agent_id]
-                #     scores[agent_id] += updated_reward
                 else:  # RandomAgent or BitSmartAgent
                     action = current_agent.select_action(env, info)
                     env.step(action)
@@ -82,7 +77,6 @@ def train_against_agent(env, agent1, agent2, episodes):
                     scores[agent_id] += updated_reward
             else:
                 env.step(None)
-            terminations = env.terminations
 
         # Train PPO Agent after each episode
         agent1.learn()
@@ -122,19 +116,19 @@ def evaluate_agent(env, agent, episodes=100):
 
 def main():
     # Initialize the environment
-    env = OurHexGame(board_size=11, sparse_flag=False, render_mode=None)
+    env = OurHexGame(board_size=11, sparse_flag=True, render_mode=None)
 
     # Initialize PPO Agent with fixed parameters
     ppo_agent = Agent(
         n_actions=env.action_spaces[env.possible_agents[0]].n,
         input_dims=[env.board_size * env.board_size],
         gamma=0.99,
-        actor_lr=0.0003,
-        critic_lr=0.0003,
-        gae_lambda=0.95,
+        actor_lr=0.00022,
+        critic_lr=0.0011,
+        gae_lambda=0.92,
         policy_clip=0.2,
-        batch_size=64,
-        n_epochs=10
+        batch_size=128,
+        n_epochs=18
     )
 
     # Define opponents
@@ -155,12 +149,12 @@ def main():
         n_actions=env.action_spaces[env.possible_agents[0]].n,
         input_dims=[env.board_size * env.board_size],
         gamma=0.99,
-        actor_lr=0.0003,
-        critic_lr=0.0003,
-        gae_lambda=0.95,
+        actor_lr=0.00022,
+        critic_lr=0.0011,
+        gae_lambda=0.92,
         policy_clip=0.2,
-        batch_size=64,
-        n_epochs=10
+        batch_size=128,
+        n_epochs=18
     )
     load_ppo_checkpoint(agent2, filename='ppo_checkpoint_after_bitsmart.pth')
 
@@ -171,18 +165,8 @@ def main():
     # Save the intermediate model after self-play
     save_ppo_checkpoint(ppo_agent, filename='ppo_checkpoint_after_selfplay.pth')
 
-    # # Load G03Agent and its model
-    # print("\nLoading G03Agent...")
-    # ppo_agent_g03 = G03Agent(env)
-    # MODEL_PATH_NEW = "agent_group3/trained_dense_agent.pth"
-    # ppo_agent_g03.load_model(MODEL_PATH_NEW)
-
-    # # Train PPO agent against G03Agent
-    # print("\nTraining against G03Agent...")
-    # train_against_agent(env, ppo_agent, ppo_agent_g03, episodes=2000)
-
     # Save the final model
-    save_ppo_checkpoint(ppo_agent, filename='ppo_checkpoint_final.pth', iteration=2000)
+    save_ppo_checkpoint(ppo_agent, filename='ppo_checkpoint_sparse.pth', iteration=2000)
 
     # Evaluate the final model
     # evaluate_agent(env, ppo_agent)

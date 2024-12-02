@@ -1,9 +1,9 @@
 import random
 import torch
 from ourhexenv import OurHexGame
-from ppo_hex.ppo_agent import Agent
+from agents.ppo_agent import Agent
 from tqdm import tqdm
-from ppo_hex.bit_smarter_agent import BitSmartAgent
+from agents.bit_smarter_agent import BitSmartAgent
 from agent_group12.g12agent import G12Agent, load_model
 from agent_group3.g03agent import G03Agent
 
@@ -40,8 +40,6 @@ ppo_agent_old.actor_critic.eval()
 
 ppo_agent_opp = G03Agent(env)
 ppo_agent_opp.load_model(MODEL_PATH_NEW)
-# ppo_agent_opp = G12Agent(env)
-# load_model(ppo_agent_opp, MODEL_PATH_NEW)
 
 
 # Define the run_game function
