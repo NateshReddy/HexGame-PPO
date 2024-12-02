@@ -1,9 +1,5 @@
-import os
 import numpy as np
 import torch as T
-import torch.nn as nn
-import torch.optim as optim
-from torch.distributions.categorical import Categorical
 from agents.ppo_memory import PPOBufferMemory
 from agents.acn import ActorCriticNetwork
 
@@ -39,27 +35,7 @@ class Agent:
         
         # Use the actor-critic network to choose an action based on the current state and action mask
         return self.actor_critic.act(state, info["action_mask"])
-
-    # def calculate_gae(self, rewards, values, dones):
-    #     advantages_arr = []
-    #     for ep_rews, ep_vals, ep_dones in zip(rewards, values, dones):
-    #         advantages = []
-    #         last_advantage = 0
-
-    #         for t in reversed(range(len(ep_rews))):
-    #             if t + 1 < len(ep_rews):
-    #                 delta = ep_rews[t] + self.gamma * ep_vals[t+1] * (1 - ep_dones[t+1]) - ep_vals[t]
-    #             else:
-    #                 delta = ep_rews[t] - ep_vals[t]
-
-    #             advantage = delta + self.gamma * self.lam * (1 - ep_dones[t]) * last_advantage
-    #             last_advantage = advantage
-    #             advantages.insert(0, advantage)
-
-    #         advantages_arr.extend(advantages)
-
-    #     return torch.tensor(advantages_arr, dtype=torch.float)
-       
+ 
     def learn(self):
         for _ in range(self.n_epochs):
             # Generate batches from memory buffer
@@ -111,66 +87,6 @@ class Agent:
                 self.actor_critic.critic_optimizer.step()  # Update critic network weights
 
         self.memory.clear_memory()  # Clear memory buffer after learning
-
-    '''
-    def learn(self):
-        for _ in range(self.n_epochs):
-            state_arr, action_arr, old_prob_arr, vals_arr, reward_arr, dones_arr, batches = self.memory.generate_batches()
-
-            values = T.tensor(vals_arr).to(self.device)
-            
-            # Calculate GAE
-            advantages = np.zeros(len(reward_arr), dtype=np.float32)
-            last_gae = 0
-            for t in reversed(range(len(reward_arr) - 1)):
-                if dones_arr[t]:
-                    next_value = 0
-                else:
-                    next_value = values[t + 1]
-                delta = reward_arr[t] + self.gamma * next_value - values[t]
-                last_gae = delta + self.gamma * self.gae_lambda * last_gae * (1 - dones_arr[t])
-                advantages[t] = last_gae
-
-            advantages = T.tensor(advantages).to(self.device)
-            returns = advantages + values
-
-            for batch in batches:
-                states = T.tensor(state_arr[batch], dtype=T.float).to(self.device)
-                old_probs = T.tensor(old_prob_arr[batch]).to(self.device)
-                actions = T.tensor(action_arr[batch], dtype=T.long).to(self.device)
-
-                critic_value, new_probs, entropy = self.actor_critic.evaluate(states, actions)
-                critic_value = T.squeeze(critic_value)
-
-                prob_ratio = new_probs.exp() / old_probs.exp()
-                weighted_probs = advantages[batch] * prob_ratio
-                weighted_clipped_probs = T.clamp(prob_ratio, 1 - self.policy_clip, 1 + self.policy_clip) * advantages[batch]
-                actor_loss = -T.min(weighted_probs, weighted_clipped_probs).mean()
-
-                # Entropy regularization term (optional)
-                actor_loss -= self.entropy_coef * entropy
-
-                critic_loss = nn.functional.mse_loss(critic_value, returns)
-                
-                # total_loss = actor_loss + 0.5 * critic_loss
-                self.actor_critic.actor_optimizer.zero_grad()
-                self.actor_critic.critic_optimizer.zero_grad()
-
-                actor_loss.backward()
-                critic_loss.backward()
-                
-                self.actor_critic.actor_optimizer.step()
-                self.actor_critic.critic_optimizer.step()
-
-        self.memory.clear_memory()
-    '''
-
-    def update_checkpoint_dir(self, chkpt_dir):
-        self.chkpt_dir = chkpt_dir
-        
-        # Update checkpoint directory for both actor and critic networks
-        self.actor.update_checkpoint_dir(chkpt_dir)
-        self.critic.update_checkpoint_dir(chkpt_dir)
 
     def print_info(self, file=None):
         if file:

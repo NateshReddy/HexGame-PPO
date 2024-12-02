@@ -9,23 +9,6 @@ class ActorCriticNetwork(nn.Module):
     def __init__(self, n_actions, input_dims, actor_lr, critic_lr, fc1_dims=512, fc2_dims=512, fc3_dims=256, fc4_dims=256):
         super(ActorCriticNetwork, self).__init__()
 
-        # self.actor = nn.Sequential(
-        #     nn.Linear(*input_dims, fc1_dims),
-        #     nn.Tanh(),
-        #     nn.Linear(fc1_dims, fc2_dims),
-        #     nn.Tanh(),
-        #     nn.Linear(fc2_dims, n_actions),
-        #     nn.Softmax(dim=-1)
-        # )
-
-        # self.critic = nn.Sequential(
-        #     nn.Linear(*input_dims, fc1_dims),
-        #     nn.Tanh(),
-        #     nn.Linear(fc1_dims, fc2_dims),
-        #     nn.Tanh(),
-        #     nn.Linear(fc2_dims, 1)
-        # )
-
         self.actor = nn.Sequential(
             nn.Linear(*input_dims, fc1_dims),
             nn.ReLU(),
