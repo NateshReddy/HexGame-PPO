@@ -1,12 +1,10 @@
-import ray
-from ray import tune
-from ray.tune.schedulers import ASHAScheduler
+import torch
 from ourhexenv import OurHexGame
 from fhtw_hex.ppo_smaller import Agent
+from tqdm import tqdm
 from fhtw_hex.random_agent import RandomAgent
 from fhtw_hex.bit_smarter_agent import BitSmartAgent
-import torch
-from tqdm import tqdm
+from agent_group3.g03agent import G03Agent  # Import the new agent
 
 def save_ppo_checkpoint(agent, filename='ppo_checkpoint.pth', iteration=0):
     """Save the PPO agent's state in a checkpoint file."""
@@ -33,6 +31,15 @@ def load_ppo_checkpoint(agent, filename='ppo_checkpoint.pth'):
 def train_against_agent(env, agent1, agent2, episodes):
     """
     Train a PPO agent (Agent1) against a specified opponent (Agent2) with role-swapping.
+
+    Args:
+        env: The environment for training.
+        agent1: The PPO agent being trained.
+        agent2: The opponent agent.
+        episodes: Total number of training episodes.
+
+    Returns:
+        None
     """
     for episode in tqdm(range(episodes), desc="Training Episodes"):
         env.reset()
@@ -47,8 +54,8 @@ def train_against_agent(env, agent1, agent2, episodes):
 
         while not all(terminations.values()):
             agent_id = env.agent_selection
-            observation, reward, termination, truncation, info = env.last()
-            done = termination or truncation
+            observation, reward, terminated, truncated, info = env.last()
+            done = terminated or truncated
 
             if not done:
                 obs_flat = observation["observation"].flatten()
@@ -60,9 +67,13 @@ def train_against_agent(env, agent1, agent2, episodes):
                     action, probs, value = current_agent.choose_action(obs_flat, info)
                     env.step(action.item())
                     updated_reward = env.rewards[agent_id]
-                    # Only store memory for the PPO agent being trained
                     if current_agent == agent1:
                         agent1.remember(obs_flat, action, probs, value, updated_reward, done)
+                    scores[agent_id] += updated_reward
+                elif isinstance(current_agent, G03Agent):  # For G03Agent
+                    action = current_agent.select_action(observation, reward, terminated, truncated, info)
+                    env.step(action)
+                    updated_reward = env.rewards[agent_id]
                     scores[agent_id] += updated_reward
                 else:  # RandomAgent or BitSmartAgent
                     action = current_agent.select_action(env, info)
@@ -77,32 +88,10 @@ def train_against_agent(env, agent1, agent2, episodes):
         agent1.learn()
 
 
-def train_with_tune(config):
-    """Training with Ray Tune for hyperparameter optimization."""
-    env = OurHexGame(board_size=11, sparse_flag=False, render_mode=None)
-    ppo_agent = Agent(
-        n_actions=env.action_spaces[env.possible_agents[0]].n,
-        input_dims=[env.board_size * env.board_size],
-        **config
-    )
-
-    # Training against RandomAgent and BitSmartAgent
-    opponents = [
-        (RandomAgent(), 'random', 1000),
-        (BitSmartAgent(), 'bitsmart', 1000)
-    ]
-
-    for opponent, _, episodes in opponents:
-        train_against_agent(env, ppo_agent, opponent, episodes)
-
-    # Self-play training
-    print("\nStarting self-play training...")
-    train_against_agent(env, ppo_agent, ppo_agent, episodes=5000)
-
-    # Evaluate the agent after self-play
-    eval_episodes = 100
+def evaluate_agent(env, agent, episodes=100):
+    """Evaluate the PPO agent against BitSmartAgent."""
     wins = 0
-    for _ in range(eval_episodes):
+    for _ in tqdm(range(episodes), desc="Evaluation Episodes"):
         env.reset()
         done = False
         scores = {agent: 0 for agent in env.possible_agents}
@@ -113,7 +102,7 @@ def train_with_tune(config):
             if not done:
                 if agent_id == "player_1":
                     obs_flat = observation["observation"].flatten()
-                    action, _, _ = ppo_agent.choose_action(obs_flat, info)
+                    action, _, _ = agent.choose_action(obs_flat, info)
                     env.step(action.item())
                     updated_reward = env.rewards[agent_id]
                     scores[agent_id] += updated_reward
@@ -126,71 +115,77 @@ def train_with_tune(config):
                 env.step(None)
         if scores["player_1"] > scores["player_2"]:
             wins += 1
-
-    win_rate = wins / eval_episodes
-    ray.train.report({"win_rate":win_rate})
+    win_rate = wins / episodes
+    print(f"Evaluation completed: Win rate = {win_rate * 100:.2f}%")
+    return win_rate
 
 
 def main():
-    ray.init(num_gpus=1)
-
-    # Hyperparameter tuning configuration
-    config = {
-        "gamma": tune.uniform(0.9, 0.99),
-        "actor_lr": tune.loguniform(1e-5, 1e-2),
-        "critic_lr": tune.loguniform(1e-5, 1e-2),
-        "gae_lambda": tune.uniform(0.9, 1.0),
-        "policy_clip": tune.uniform(0.1, 0.3),
-        "batch_size": tune.choice([32, 64, 128, 256]),
-        "n_epochs": tune.randint(5, 21)
-    }
-    # config = {
-    #     "gamma": 0.9,
-    #     "actor_lr": 1e-5,
-    #     "critic_lr": 1e-5,
-    #     "gae_lambda": 0.9,
-    #     "policy_clip": 0.1,
-    #     "batch_size": 256,
-    #     "n_epochs": 5
-    # }
-
-    scheduler = ASHAScheduler(
-        max_t=1000,
-        grace_period=100,
-        reduction_factor=2
-    )
-
-    tuner = tune.Tuner(
-        tune.with_resources(train_with_tune, resources={"gpu": 1}),
-        tune_config=tune.TuneConfig(
-            metric="win_rate",
-            mode="max",
-            scheduler=scheduler,
-            num_samples=50
-        ),
-        param_space=config,
-    )
-
-    results = tuner.fit()
-
-    best_result = results.get_best_result("win_rate", "max", "last")
-    print("Best trial config:", best_result.config)
-    print("Best trial final win rate:", best_result.metrics['win_rate'])
-
-    # Train final model with best hyperparameters
+    # Initialize the environment
     env = OurHexGame(board_size=11, sparse_flag=False, render_mode=None)
-    final_agent = Agent(
+
+    # Initialize PPO Agent with fixed parameters
+    ppo_agent = Agent(
         n_actions=env.action_spaces[env.possible_agents[0]].n,
         input_dims=[env.board_size * env.board_size],
-        **best_result.config
+        gamma=0.99,
+        actor_lr=0.0003,
+        critic_lr=0.0003,
+        gae_lambda=0.95,
+        policy_clip=0.2,
+        batch_size=64,
+        n_epochs=10
     )
 
-    # Training against self-play with best hyperparameters
-    print("\nFinal self-play training...")
-    train_against_agent(env, final_agent, final_agent, episodes=5000)
+    # Define opponents
+    opponents = [
+        (RandomAgent(), 'random', 2000),
+        (BitSmartAgent(), 'bitsmart', 2000)
+    ]
+
+    # Train PPO Agent against each opponent
+    for opponent_agent, suffix, episodes in opponents:
+        print(f"\nTraining against {suffix.capitalize()}Agent...")
+        train_against_agent(env, ppo_agent, opponent_agent, episodes)
+        save_ppo_checkpoint(ppo_agent, filename=f'ppo_checkpoint_after_{suffix}.pth')
+
+    # Initialize PPO Agent 2 for self-play
+    print("\nInitializing PPO agent for self-play...")
+    agent2 = Agent(
+        n_actions=env.action_spaces[env.possible_agents[0]].n,
+        input_dims=[env.board_size * env.board_size],
+        gamma=0.99,
+        actor_lr=0.0003,
+        critic_lr=0.0003,
+        gae_lambda=0.95,
+        policy_clip=0.2,
+        batch_size=64,
+        n_epochs=10
+    )
+    load_ppo_checkpoint(agent2, filename='ppo_checkpoint_after_bitsmart.pth')
+
+    # Self-play training
+    print("\nTraining through self-play...")
+    train_against_agent(env, ppo_agent, agent2, episodes=2000)
+
+    # Save the intermediate model after self-play
+    save_ppo_checkpoint(ppo_agent, filename='ppo_checkpoint_after_selfplay.pth')
+
+    # Load G03Agent and its model
+    print("\nLoading G03Agent...")
+    ppo_agent_g03 = G03Agent(env)
+    MODEL_PATH_NEW = "agent_group3/trained_dense_agent.pth"
+    ppo_agent_g03.load_model(MODEL_PATH_NEW)
+
+    # Train PPO agent against G03Agent
+    print("\nTraining against G03Agent...")
+    train_against_agent(env, ppo_agent, ppo_agent_g03, episodes=2000)
 
     # Save the final model
-    save_ppo_checkpoint(final_agent, filename="ppo_checkpoint_final.pth")
+    save_ppo_checkpoint(ppo_agent, filename='ppo_checkpoint_final.pth', iteration=2000)
+
+    # Evaluate the final model
+    # evaluate_agent(env, ppo_agent)
 
 
 if __name__ == "__main__":
