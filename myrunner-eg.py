@@ -1,30 +1,35 @@
 from ourhexenv import OurHexGame
+from agent_group3.g03agent import G03Agent
+from agent_group12.g12agent import G12Agent
 from g06agent import G06Agent
-from ppo_hex.bit_smarter_agent import BitSmartAgent
 import random
 
-env = OurHexGame(board_size=11)
+env = OurHexGame(board_size=11, sparse_flag= False)
 env.reset()
 
 # player 1
-g06agent1 = G06Agent(env)
+gXXagent = G06Agent(env)
 # player 2
-g06agent2 = BitSmartAgent()
+gYYagent = G03Agent(env)
 
+smart_agent_player_id = random.choice(env.agents)
 
+rewards = {'player_1': 0, 'player_2': 0}
 done = False
 while not done:
     for agent in env.agent_iter():
         observation, reward, termination, truncation, info = env.last()
-        
+        # rewards[agent] += reward
         if termination or truncation:
+            done = True
             break
 
-        
         if agent == 'player_1':
-            action = g06agent2.select_action(env, info)
+            action = gXXagent.select_action(observation, reward, termination, truncation, info)
         else:
-            action = g06agent1.select_action(observation, reward, termination, truncation, info)
+            action = gYYagent.select_action(observation, reward, termination, truncation, info)
 
         env.step(action)
         env.render()
+    
+    # print(rewards)
