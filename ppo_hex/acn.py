@@ -5,22 +5,6 @@ import torch.optim as optim
 from torch.distributions import Categorical
 import numpy as np
 
-# class CategoricalMasked(Categorical):
-#     """Masked categorical distribution for action selection."""
-#     def __init__(self, probs: T.Tensor, mask: T.Tensor):
-#         self.batch, self.nb_action = probs.size()
-#         self.tensor_mask = T.stack([mask.bool()]*self.batch, dim=0)
-#         self.all_zeros = T.zeros_like(probs)
-#         masked_probs = T.where(self.tensor_mask, probs, self.all_zeros)
-#         # Add epsilon to avoid division by zero
-#         #masked_probs += 1e-8
-        
-#         # Normalize probabilities
-#         masked_probs /= masked_probs.sum(dim=-1, keepdim=True)
-#         #normalized_probs = (self.all_zeros + 1e-8) / (self.all_zeros + 1e-8).sum(dim=-1, keepdim=True)
-#         super().__init__(probs=masked_probs)
-
-
 class ActorCriticNetwork(nn.Module):
     def __init__(self, n_actions, input_dims, actor_lr, critic_lr, fc1_dims=64, fc2_dims=64, chkpt_dir='tmp/ppo'):
         super(ActorCriticNetwork, self).__init__()
@@ -122,17 +106,8 @@ class ActorCriticNetwork(nn.Module):
 
     def act(self, state: np.ndarray, mask: np.ndarray):
         """Compute action and log probabilities."""
-        # probs = self.actor(state)
-        # mask = T.from_numpy(mask).to(dtype=T.float32).to(self.device)
-        # distribution = CategoricalMasked(probs, mask)
-        # action = distribution.sample()
-        
-        # action_log_prob = distribution.log_prob(action)
-        # state_val = self.critic(state)
-
-        # return action.detach(), action_log_prob.detach(), state_val.detach()
-
         probs = self.actor(state)
+        
         # Convert probs to numpy array
         probs_np = probs.detach().cpu().numpy().flatten()
 
@@ -147,7 +122,7 @@ class ActorCriticNetwork(nn.Module):
             probs_np[valid_actions] = 1.0 / np.sum(valid_actions)
 
         # Choose action
-        action = np.random.choice(len(probs_np), p=probs_np)
+        action = T.multinomial(torch.tensor(probs_np), num_samples=1)
 
         # Convert back to tensor
         action_tensor = T.tensor([action], dtype=T.long).to(self.device)
@@ -157,6 +132,19 @@ class ActorCriticNetwork(nn.Module):
         action_log_prob = T.log(probs_tensor)
         state_val = self.critic(state)
         return action_tensor.detach(), action_log_prob.detach(), state_val.detach()
+
+#         self.batch, self.nb_action = probs.size()
+#         self.tensor_mask = T.stack([mask.bool()]*self.batch, dim=0)
+#         self.all_zeros = T.zeros_like(probs)
+#         masked_probs = T.where(self.tensor_mask, probs, self.all_zeros)
+#         # Add epsilon to avoid division by zero
+#         #masked_probs += 1e-8
+        
+#         # Normalize probabilities
+#         masked_probs /= masked_probs.sum(dim=-1, keepdim=True)
+#         #normalized_probs = (self.all_zeros + 1e-8) / (self.all_zeros + 1e-8).sum(dim=-1, keepdim=True)
+#         super().__init__(probs=masked_probs)
+
     
     def evaluate(self, state: np.ndarray, action: T.Tensor):
         """Evaluate state for critic value."""

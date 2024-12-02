@@ -1,6 +1,6 @@
 from ourhexenv import OurHexGame  # Import your custom environment
-from fhtw_hex.ppo_smaller import Agent  # Import the PPO implementation from ppo_smaller
-from fhtw_hex.reward_utils import compute_rewards, can_win_next_move  # Updated rewards utility
+from ppo_hex.ppo_smaller import Agent  # Import the PPO implementation from ppo_smaller
+from ppo_hex.reward_utils import compute_rewards, can_win_next_move  # Updated rewards utility
 import numpy as np
 import torch
 from tqdm import tqdm

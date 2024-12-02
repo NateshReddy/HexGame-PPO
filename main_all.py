@@ -2,9 +2,9 @@ import ray
 from ray import tune
 from ray.tune.schedulers import ASHAScheduler
 from ourhexenv import OurHexGame
-from fhtw_hex.ppo_smaller import Agent
-from fhtw_hex.random_agent import RandomAgent
-from fhtw_hex.bit_smarter_agent import BitSmartAgent
+from ppo_hex.ppo_smaller import Agent
+from ppo_hex.random_agent import RandomAgent
+from ppo_hex.bit_smarter_agent import BitSmartAgent
 import torch
 from tqdm import tqdm
 

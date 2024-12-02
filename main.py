@@ -1,9 +1,9 @@
 from ourhexenv import OurHexGame  # Import your custom environment
-from fhtw_hex.ppo_smaller import Agent  # Import the PPO implementation from ppo_smaller
+from ppo_hex.ppo_smaller import Agent  # Import the PPO implementation from ppo_smaller
 from tqdm import tqdm
 import torch
-from fhtw_hex.random_agent import RandomAgent
-from fhtw_hex.bit_smarter_agent import BitSmartAgent
+from ppo_hex.random_agent import RandomAgent
+from ppo_hex.bit_smarter_agent import BitSmartAgent
 
 def swap_roles(env, agent1, agent2):
     """Swap roles of Player 1 and Player 2."""
@@ -132,8 +132,8 @@ def main():
 
     # Define opponents as a list of tuples (opponent_agent, filename_suffix, episodes)
     opponents = [
-        (RandomAgent(), 'random', 1000),
-        (BitSmartAgent(), 'bitsmart', 1000)
+        (RandomAgent(), 'random', 2000),
+        (BitSmartAgent(), 'bitsmart', 4000)
     ]
 
     # Train PPO Agent against each opponent
@@ -160,7 +160,7 @@ def main():
 
     # Self-play training
     print("\nTraining through self-play...")
-    train_against_agent(env, ppo_agent, agent2, episodes=2000)
+    train_against_agent(env, ppo_agent, agent2, episodes=8000)
 
     # Save the final self-play model
     save_ppo_checkpoint(ppo_agent, filename='ppo_checkpoint_final.pth', iteration=1000)
@@ -179,7 +179,7 @@ def evaluate_agent(env, agent, episodes=100):
             observation, reward, termination, truncation, info = env.last()
             done = termination or truncation
             if not done:
-                if agent_id == "player_1":
+                if agent_id == "player_2":
                     obs_flat = observation["observation"].flatten()
                     action, _, _ = agent.choose_action(obs_flat, info)
                     env.step(action.item())
@@ -192,7 +192,7 @@ def evaluate_agent(env, agent, episodes=100):
                     scores[agent_id] += updated_reward
             else:
                 env.step(None)
-        if scores["player_1"] > scores["player_2"]:
+        if scores["player_2"] > scores["player_1"]:
             wins += 1
     win_rate = wins / episodes
     print(f"Evaluation completed: Win rate = {win_rate * 100:.2f}%")

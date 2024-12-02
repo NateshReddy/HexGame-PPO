@@ -2,7 +2,7 @@ from typing import Any
 import os
 from dotenv import load_dotenv
 from ourhexenv import OurHexGame
-from fhtw_hex.ppo_smaller import Agent
+from ppo_hex.ppo_smaller import Agent
 
 class G06Agent(Agent):
     """Wrapper class for our agents.

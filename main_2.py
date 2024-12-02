@@ -1,12 +1,12 @@
 from ourhexenv import OurHexGame  # Import your custom environment
-from fhtw_hex.ppo_smaller import Agent  # Import the PPO implementation from ppo_smaller
-from fhtw_hex.reward_utils import compute_rewards, can_win_next_move  # Updated rewards utility
+from ppo_hex.ppo_smaller import Agent  # Import the PPO implementation from ppo_smaller
+from ppo_hex.reward_utils import compute_rewards, can_win_next_move  # Updated rewards utility
 import numpy as np
 import ipdb
 import torch
 from tqdm import tqdm
-from fhtw_hex.random_agent import RandomAgent
-from fhtw_hex.bit_smarter_agent import BitSmartAgent
+from ppo_hex.random_agent import RandomAgent
+from ppo_hex.bit_smarter_agent import BitSmartAgent
 
 def save_ppo_checkpoint(agent, filename='ppo_checkpoint.pth', iteration=0):
     """
