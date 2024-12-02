@@ -197,3 +197,25 @@ class Agent:
             with open(file, 'a') as f:
                 f.write("\nCritic Network Info:\n")
             self.critic.print_info(file)
+
+    def select_action(self, observation, reward, termination, truncation, info):
+        return self.choose_action(observation["observation"].flatten(), info)
+
+    @classmethod
+    def from_file(cls, filename, env):
+        agent = cls(
+            n_actions=env.action_spaces[env.possible_agents[0]].n,
+            input_dims=[env.board_size * env.board_size],
+            gamma=0.99,
+            actor_lr=0.0003,
+            critic_lr=0.0003,
+            gae_lambda=0.95,
+            policy_clip=0.2,
+            batch_size=64,
+            n_epochs=10
+        )
+        checkpoint = T.load(filename)
+        agent.actor_critic.load_state_dict(checkpoint['model_state_dict'])
+        agent.actor_critic.actor_optimizer.load_state_dict(checkpoint['actor_optimizer_state_dict'])
+        agent.actor_critic.critic_optimizer.load_state_dict(checkpoint['critic_optimizer_state_dict'])
+        return agent
