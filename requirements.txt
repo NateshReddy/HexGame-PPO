@@ -1,0 +1,5 @@
+"pettingzoo[classic]"
+torch
+torchvision
+"ray[tune]"
+pygame

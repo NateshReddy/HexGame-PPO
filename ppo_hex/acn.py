@@ -122,16 +122,6 @@ class ActorCriticNetwork(nn.Module):
 
     def act(self, state: np.ndarray, mask: np.ndarray):
         """Compute action and log probabilities."""
-        # probs = self.actor(state)
-        # mask = T.from_numpy(mask).to(dtype=T.float32).to(self.device)
-        # distribution = CategoricalMasked(probs, mask)
-        # action = distribution.sample()
-        
-        # action_log_prob = distribution.log_prob(action)
-        # state_val = self.critic(state)
-
-        # return action.detach(), action_log_prob.detach(), state_val.detach()
-
         probs = self.actor(state)
         # Convert probs to numpy array
         probs_np = probs.detach().cpu().numpy().flatten()
