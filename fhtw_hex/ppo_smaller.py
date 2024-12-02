@@ -9,7 +9,7 @@ from fhtw_hex.acn import ActorCriticNetwork
 
 class Agent:
     def __init__(self, n_actions, input_dims, gamma=0.99, actor_lr=0.0003, critic_lr=0.0003, gae_lambda=0.95,
-                 policy_clip=0.2, batch_size=2, n_epochs=10, chkpt_dir="tmp/ppo", entropy_coef=0.01):
+                 policy_clip=0.2, batch_size=64, n_epochs=10, chkpt_dir="tmp/ppo", entropy_coef=0.01, max_grad_norm=0.5, mini_batch_size=4):
         
         # Initialize hyperparameters for PPO
         self.gamma = gamma  # Discount factor for future rewards
@@ -18,6 +18,8 @@ class Agent:
         self.gae_lambda = gae_lambda  # GAE lambda for advantage estimation
         self.chkpt_dir = chkpt_dir  # Directory to save checkpoints
         self.entropy_coef = entropy_coef  # Coefficient for entropy bonus
+        self.max_grad_norm = max_grad_norm
+        self.mini_batch_size = mini_batch_size
 
         # Initialize the actor-critic network
         self.actor_critic = ActorCriticNetwork(n_actions, input_dims, actor_lr, critic_lr,
@@ -73,7 +75,7 @@ class Agent:
     #         advantages_arr.extend(advantages)
 
     #     return torch.tensor(advantages_arr, dtype=torch.float)
-       
+    
     def learn(self):
         # Reset action counts (for exploration strategies like UCB)
         self.actor_critic.reset_action_counts()
@@ -117,18 +119,83 @@ class Agent:
                 critic_loss = critic_loss.mean()
 
                 total_loss = actor_loss + 0.5 * critic_loss  # Total loss is a combination of actor and critic loss
-                
-                self.actor_critic.actor_optimizer.zero_grad()  # Zero gradients for optimizer
-                self.actor_critic.critic_optimizer.zero_grad()
 
-                total_loss.backward()  # Backpropagate total loss
+                self.actor_critic.actor_optimizer.zero_grad()  # Zero gradients for optimizer
+                self.actor_critic.actor_optimizer.zero_grad()  # Zero gradients for optimizer
+
+                total_loss.backward()     # Backpropagate actor loss
                 
+                nn.utils.clip_grad_norm_(self.actor.parameters(), self.max_grad_norm)
+
+                # critic_loss.backward()
+                nn.utils.clip_grad_norm_(self.critic.parameters(), self.max_grad_norm)
+
                 self.actor_critic.actor_optimizer.step()  # Update actor network weights
                 self.actor_critic.critic_optimizer.step()  # Update critic network weights
 
         self.memory.clear_memory()  # Clear memory buffer after learning
 
+    
     '''
+    def learn(self):
+        # Reset action counts (for exploration strategies like UCB)
+        self.actor_critic.reset_action_counts()
+        
+        for _ in range(self.n_epochs):
+            # Generate batches from memory buffer
+            state_arr, action_arr, old_prob_arr, vals_arr, reward_arr, dones_arr, batches = self.memory.generate_batches()
+
+            values = T.tensor(vals_arr).to(self.device)
+            advantage = np.zeros(len(reward_arr), dtype=np.float32)
+
+            for t in range(len(reward_arr)):
+                advantage[t] = reward_arr[t] - values[t]
+
+            advantage = T.tensor(advantage).to(self.device)
+
+            # Shuffle the batches
+            np.random.shuffle(batches)
+
+            # Split batches into mini-batches
+            mini_batch_size = self.mini_batch_size
+            for i in range(0, len(batches), mini_batch_size):
+                mini_batch = batches[i:i+mini_batch_size]
+                
+                states = T.tensor(state_arr[mini_batch], dtype=T.float).to(self.device)
+                old_probs = T.tensor(old_prob_arr[mini_batch]).to(self.device)
+                actions = T.tensor(action_arr[mini_batch], dtype=T.long).to(self.device)
+
+                critic_value, new_probs, entropy = self.actor_critic.evaluate(states, actions)
+
+                critic_value = T.squeeze(critic_value)
+
+                prob_ratio = new_probs.exp() / old_probs.exp()
+                
+                weighted_probs = advantage[mini_batch] * prob_ratio
+                
+                weighted_clipped_probs = T.clamp(prob_ratio,
+                                                1 - self.policy_clip,
+                                                1 + self.policy_clip) * advantage[mini_batch]
+                
+                actor_loss = -T.min(weighted_probs, weighted_clipped_probs).mean()
+
+                returns = advantage[mini_batch] + values[mini_batch]
+                
+                critic_loss = (returns - critic_value) ** 2
+                critic_loss = critic_loss.mean()
+
+                total_loss = actor_loss + 0.5 * critic_loss
+
+                self.actor_critic.actor_optimizer.zero_grad()
+                self.actor_critic.critic_optimizer.zero_grad()
+                total_loss.backward()
+                nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.max_grad_norm)
+                self.actor_critic.actor_optimizer.step()
+                self.actor_critic.critic_optimizer.step()
+
+        self.memory.clear_memory()
+    
+    
     def learn(self):
         for _ in range(self.n_epochs):
             state_arr, action_arr, old_prob_arr, vals_arr, reward_arr, dones_arr, batches = self.memory.generate_batches()
@@ -167,13 +234,14 @@ class Agent:
                 actor_loss -= self.entropy_coef * entropy
 
                 critic_loss = nn.functional.mse_loss(critic_value, returns)
+
+                total_loss = actor_loss + 0.5 * critic_loss
                 
                 # total_loss = actor_loss + 0.5 * critic_loss
                 self.actor_critic.actor_optimizer.zero_grad()
                 self.actor_critic.critic_optimizer.zero_grad()
 
-                actor_loss.backward()
-                critic_loss.backward()
+                total_loss.backward()
                 
                 self.actor_critic.actor_optimizer.step()
                 self.actor_critic.critic_optimizer.step()
