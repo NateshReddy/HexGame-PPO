@@ -8,7 +8,7 @@ from agent_group12.g12agent import G12Agent, load_model
 from agent_group3.g03agent import G03Agent
 
 # Parameters
-MODEL_PATH_OLD = "ppo_checkpoint_final.pth"
+MODEL_PATH_OLD = "ppo_checkpoint_dense.pth"
 MODEL_PATH_NEW = "agent_group12/g12agent.pth"
 MODEL_PATH_NEW = "agent_group3/trained_dense_agent.pth"
 NUM_GAMES = 100  # Number of games to evaluate
