@@ -6,7 +6,7 @@ from tqdm import tqdm
 from fhtw_hex.bit_smarter_agent import BitSmartAgent
 
 # Parameters
-MODEL_PATH_OLD = "ppo_checkpoint.pth"
+MODEL_PATH_OLD = "ppo_checkpoint_final.pth"
 MODEL_PATH_NEW = "ppo_checkpoint_agent2.pth"
 NUM_GAMES = 1000  # Number of games to evaluate
 
@@ -28,8 +28,7 @@ ppo_agent_old = Agent(
 # Load trained Old PPO model
 try:
     checkpoint = torch.load(MODEL_PATH_OLD)
-    ppo_agent_old.actor.load_state_dict(checkpoint['model_state_dict'])  # Load the actor model
-    print(f"Old model loaded successfully from {MODEL_PATH_OLD}.")
+    ppo_agent_old.actor.load_state_dict(checkpoint['model_state_dict'])
 except FileNotFoundError:
     print(f"Old model file not found at {MODEL_PATH_OLD}. Proceeding without old PPO agent.")
 ppo_agent_old.actor.eval()

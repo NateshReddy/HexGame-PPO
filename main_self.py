@@ -15,10 +15,10 @@ def save_ppo_checkpoint(agent, filename='ppo_checkpoint.pth', iteration=0):
         iteration: Current training iteration.
     """
     checkpoint = {
-        'model_state_dict': agent.actor.state_dict(),  # Save actor model state
-        'actor_optimizer_state_dict': agent.actor.optimizer.state_dict(),  # Save actor optimizer state
-        'critic_optimizer_state_dict': agent.critic.optimizer.state_dict(),  # Save critic optimizer state
-        'iteration': iteration  # Store current iteration or epoch
+        'model_state_dict': agent.actor.state_dict(),
+        'actor_optimizer_state_dict': agent.actor.optimizer.state_dict(),
+        'critic_optimizer_state_dict': agent.critic.optimizer.state_dict(),
+        'iteration': iteration
     }
     torch.save(checkpoint, filename)
     print(f"Checkpoint saved at {filename}")
@@ -57,7 +57,7 @@ def main():
         batch_size=64,
         n_epochs=10
     )
-    load_ppo_checkpoint(agent1, filename='ppo_checkpoint.pth')
+    load_ppo_checkpoint(agent1, filename='ppo_checkpoint_final.pth')
 
     # PPO Agent 2: Train from scratch
     agent2 = Agent(
@@ -71,7 +71,7 @@ def main():
         n_epochs=10
     )
 
-    n_games = 50  # Total games to play
+    n_games = 500  # Total games to play
 
     for game in tqdm(range(n_games)):
         env.reset()
