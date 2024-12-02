@@ -31,15 +31,17 @@ ppo_agent_old = Agent(
 
 # Load trained Old PPO model
 try:
-    checkpoint = torch.load(MODEL_PATH_OLD)
+    checkpoint = torch.load(MODEL_PATH_OLD, map_location=torch.device('cpu'))
     ppo_agent_old.actor_critic.load_state_dict(checkpoint['model_state_dict'])
     print(f"Old model loaded successfully from {MODEL_PATH_OLD}.")
 except FileNotFoundError:
     print(f"Old model file not found at {MODEL_PATH_OLD}. Proceeding without old PPO agent.")
 ppo_agent_old.actor_critic.eval()
 
-ppo_agent_g03 = G03Agent(env)
-ppo_agent_g03.load_model(MODEL_PATH_NEW)
+ppo_agent_opp = G03Agent(env)
+ppo_agent_opp.load_model(MODEL_PATH_NEW)
+# ppo_agent_opp = G12Agent(env)
+# load_model(ppo_agent_opp, MODEL_PATH_NEW)
 
 
 # Define the run_game function
@@ -105,5 +107,5 @@ def evaluate_agents(agent_1, agent_2, env, num_games=50):
     return win_rate
 
 # Run the evaluation
-win_rate = evaluate_agents(ppo_agent_old, ppo_agent_g03, env, num_games=NUM_GAMES)
+win_rate = evaluate_agents(ppo_agent_opp, ppo_agent_old, env, num_games=NUM_GAMES)
 print(f"Agent 1 win rate: {win_rate * 100:.2f}% over {NUM_GAMES} games.")

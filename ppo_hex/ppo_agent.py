@@ -215,7 +215,7 @@ class Agent:
             batch_size=64,
             n_epochs=10
         )
-        checkpoint = T.load(filename)
+        checkpoint = T.load(filename, map_location=T.device('cpu'))
         agent.actor_critic.load_state_dict(checkpoint['model_state_dict'])
         agent.actor_critic.actor_optimizer.load_state_dict(checkpoint['actor_optimizer_state_dict'])
         agent.actor_critic.critic_optimizer.load_state_dict(checkpoint['critic_optimizer_state_dict'])

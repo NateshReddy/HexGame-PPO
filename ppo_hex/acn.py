@@ -205,6 +205,7 @@ class ActorCriticNetwork(nn.Module):
             probs_np /= np.sum(probs_np)
         else:
             probs_np[valid_actions] = 1.0 / np.sum(valid_actions)
+            # import ipdb; ipdb.set_trace()
 
         # Choose action
         action = np.random.choice(len(probs_np), p=probs_np)
