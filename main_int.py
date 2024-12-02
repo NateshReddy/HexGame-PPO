@@ -178,7 +178,7 @@ def main():
     evaluate_agent(env, ppo_agent)
 
 if __name__ == "__main__":
-    # main()
+    main()
     env = OurHexGame(board_size=11, sparse_flag=False, render_mode=None)
 
     # Initialize PPO Agent with fixed parameters
