@@ -69,9 +69,9 @@ def train_against_agent(env, ppo_agent, opponent_agent, episodes):
 
         # Determine roles based on episode number
         if episode < episodes // 2:
-            p1_agent, p2_agent = agent1, agent2  # Agent1 as player_1
+            p1_agent, p2_agent = ppo_agent, opponent_agent  # Agent1 as player_1
         else:
-            p1_agent, p2_agent = agent2, agent1  # Agent1 as player_2
+            p1_agent, p2_agent = opponent_agent, ppo_agent  # Agent1 as player_2
 
 
         while not all(terminations.values()):
