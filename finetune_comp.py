@@ -116,10 +116,10 @@ def main():
 
     # Train PPO agent against competing agent
     print("\nTraining against competing Agent...")
-    train_against_agent(env, ppo_agent, ppo_agent_g03, episodes=2000)
+    train_against_agent(env, ppo_agent, ppo_agent_g03, episodes=1500)
 
     # Save the final model
-    save_ppo_checkpoint(ppo_agent, filename='ppo_checkpoint_final.pth', iteration=2000)
+    save_ppo_checkpoint(ppo_agent, filename='ppo_checkpoint_final.pth', iteration=1500)
 
     print("Training completed.")
 

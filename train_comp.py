@@ -116,7 +116,7 @@ def evaluate_agent(env, agent, episodes=100):
 
 def main():
     # Initialize the environment
-    env = OurHexGame(board_size=11, sparse_flag=True, render_mode=None)
+    env = OurHexGame(board_size=11, sparse_flag=False, render_mode=None)
 
     # Initialize PPO Agent with fixed parameters
     ppo_agent = Agent(
@@ -166,7 +166,7 @@ def main():
     save_ppo_checkpoint(ppo_agent, filename='ppo_checkpoint_after_selfplay.pth')
 
     # Save the final model
-    save_ppo_checkpoint(ppo_agent, filename='ppo_checkpoint_sparse.pth', iteration=2000)
+    # save_ppo_checkpoint(ppo_agent, filename='ppo_checkpoint_sparse.pth', iteration=2000)
 
     # Evaluate the final model
     # evaluate_agent(env, ppo_agent)
